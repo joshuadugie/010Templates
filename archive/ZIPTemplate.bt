@@ -1,5 +1,5 @@
 //-----------------------------------
-//--- 010 Editor v1.0 Binary Template
+//--- 010 Editor v1.1 Binary Template
 //
 // Name:    ZIPTemplate.bt
 // Purpose: Defines a template for
@@ -8,6 +8,20 @@
 
 // Define structures used in ZIP files
 
+//enum used for compression format
+typedef enum <short> { 
+    COMP_STORED    = 0,
+    COMP_SHRUNK    = 1,
+    COMP_REDUCED1  = 2,
+    COMP_REDUCED2  = 3,
+    COMP_REDUCED3  = 4,
+    COMP_REDUCED4  = 5,
+    COMP_IMPLODED  = 6,
+    COMP_TOKEN     = 7,
+    COMP_DEFLATE   = 8,
+    COMP_DEFLATE64 = 9    
+} COMPTYPE;
+ 
 // Defines a file record
 typedef struct {
     // Header for the file
@@ -15,10 +29,12 @@ typedef struct {
     uchar    frSignature[4];    //0x04034b50
     ushort   frVersion;
     ushort   frFlags;
-    ushort   frCompression;
+    COMPTYPE frCompression;
     DOSTIME  frFileTime;
     DOSDATE  frFileDate;
+    DisplayFormatHex();
     uint     frCrc;
+    DisplayFormatDecimal();
     uint     frCompressedSize;
     uint     frUncompressedSize;
     ushort   frFileNameLength;
@@ -51,10 +67,12 @@ typedef struct {
     ushort   deVersionMadeBy;
     ushort   deVersionToExtract;
     ushort   deFlags;
-    ushort   deCompression;
+    COMPTYPE deCompression;
     DOSTIME  deFileTime;
     DOSDATE  deFileDate;
+    DisplayFormatHex();
     uint     deCrc;
+    DisplayFormatDecimal();
     uint     deCompressedSize;
     uint     deUncompressedSize;
     ushort   deFileNameLength;
