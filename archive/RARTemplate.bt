@@ -1,0 +1,385 @@
+//-----------------------------------
+//--- 010 Editor v1.3 Binary Template
+//
+// File:    RARTemplate.bt
+// Author:  Alexander Sherman
+// Purpose: Defines a template for
+//    parsing RAR files.
+// Revision: 5
+//-----------------------------------
+
+
+// RAR archive structures
+// Based on TECHNOTE.TXT from the RAR archiver distribution
+
+LittleEndian();
+
+local const uint16 SignatureLen = 7;
+const string RarSignature = "Rar!" + '\x1A' + '\x07';
+
+///////////////
+
+struct FileHeadBlock;
+struct SubBlock;
+
+///////////////
+
+enum <byte> RarBlockType
+{
+	MARKER=0x72, ARCHIVE, FILE_OR_DIR, COMMENT_OLD, AV_OLD_1, SUBBLOCK_OLD, RR_OLD, AV_OLD_2, SUBBLOCK, _END_
+};
+
+////////////////
+
+local uint16 _flags = 0;
+
+/// info:
+local uquad iBlocksCounter = 0;
+local uquad iFiles = 0;
+local uquad iDirs = 0;
+local uquad iSubBlocks = 0;
+local uquad iUniNames = 0;
+local ubyte iMinVerToUnpack = 0xff;
+local ubyte iMaxVerToUnpack = 0;
+local uquad iTotalUnpackedSize = 0;
+
+////////////////
+
+enum <byte> OsType 
+{ 
+	_MS_DOS, _OS_2, _Win32, _Unix, _Mac_OS, _BeOS 
+};
+
+enum <char> PackMethod 
+{ 
+	Store='0', Fastest, Fast, Normal, Good, Best 
+};
+
+struct UnixStyleAttrs
+{
+	uint32 owner_may_eXecute : 1;
+	uint32 owner_may_Write : 1;
+	uint32 owner_may_Read : 1;
+
+	uint32 group_may_eXecute : 1;
+	uint32 gorup_may_Write : 1;
+	uint32 group_may_Read : 1;
+
+	uint32 everybody_may_eXecute : 1;
+	uint32 everybody_may_Write : 1;
+	uint32 everybody_may_Read : 1;
+
+	uint32 _s : 1; // ??
+	uint32 _s : 1; // ??
+	
+	uint32 _unused : 21;
+};
+
+struct DosFileAttrs
+{
+	uint32 READONLY : 1; //              0x00000001  
+	uint32 HIDDEN : 1; //                0x00000002  
+	uint32 SYSTEM : 1; //                0x00000004  
+	uint32 VOLUME : 1;
+	uint32 DIRECTORY : 1; //             0x00000010
+	uint32 ARCHIVE : 1; //               0x00000020
+	uint32 _res : 26;
+};
+
+struct WinFileAttrs
+{
+	uint32 READONLY : 1;
+	uint32 HIDDEN : 1;
+	uint32 SYSTEM : 1;
+	uint32 VOLUME : 1;
+	uint32 DIRECTORY : 1;
+	uint32 ARCHIVE : 1;
+	uint32 DEVICE : 1;
+	uint32 NORMAL : 1;
+	uint32 TEMPORARY : 1;
+	uint32 SPARSE_FILE : 1;
+	uint32 REPARSE_POINT : 1;
+	uint32 COMPRESSED : 1;
+	uint32 OFFLINE : 1;
+	uint32 NOT_CONTENT_INDEXED : 1;
+	uint32 ENCRYPTED : 1;
+	uint32 _res2 : 17;
+};
+
+struct CommonBlockFlags
+{
+	ushort _reserved : 14;
+	ushort OLD_VERSION_IGNORE : 1;
+	ushort ADD_SIZE_PRESENT : 1;
+};
+
+struct MainHeadFlags
+{
+	ubyte ARCHIVE_VOLUME : 1;
+	ubyte ARCHIVE_COMMENT_PRESENT : 1;
+	ubyte ARCHIVE_LOCKED : 1;
+	ubyte ARCHIVE_SOLID : 1;
+	ubyte NEW_VOLUME_NAMING : 1; 
+	ubyte AV_PRESENT : 1;
+	ubyte RECOVERY_PRESENT : 1;
+	ubyte BLOCK_HEADERS_ENCRYPTED : 1;
+	ubyte IS_FIRST_VOLUME : 1;
+	ubyte _reserved : 5;
+	ubyte OLD_VERSION_IGNORE : 1;
+	ubyte ADD_SIZE_PRESENT : 1;
+};
+
+/*
+enum <byte> FileDictType
+{
+	_64K, _128K, _256K, _512K, _1024K, _2048K, _4096K, _Directory
+};
+*/
+
+struct FileHeadFlags
+{
+	ubyte from_PREV_VOLUME : 1;
+	ubyte to_NEXT_VOLUME : 1;
+	ubyte PASSWORD_ENCRYPTED : 1;
+	ubyte FILE_COMMENT_PRESENT : 1;
+	ubyte SOLID : 1;
+	/* FileDictType */ ubyte DICTIONARY : 3;
+	ubyte HIGH_SIZE : 1;
+	ubyte has_UNICODE_FILENAME : 1;
+	ubyte ENCRYPTION_SALT : 1;
+	ubyte IS_OLD_FILE_VERSION : 1;
+	ubyte EXTENDED_TIME_INFO : 1;
+	ubyte _reserved : 1;
+	ubyte OLD_VERSION_IGNORE : 1;
+	ubyte ADD_SIZE_PRESENT : 1;
+};
+
+struct RarBlock
+{
+	local quad iOfs = FTell();
+
+	DisplayFormatHex();
+	uint16 HEAD_CRC;
+	DisplayFormatDecimal();
+
+	RarBlockType HeadType;
+
+	_flags = ReadUShort(FTell());
+
+	if (HeadType == ARCHIVE)
+		MainHeadFlags HEAD_FLAGS; 
+	else if (HeadType == FILE_OR_DIR)
+		FileHeadFlags HEAD_FLAGS;
+	else
+		CommonBlockFlags HEAD_FLAGS;
+
+	++iBlocksCounter;
+
+	if (HeadType < MARKER || HeadType > _END_)
+	{
+		Warning("Unknown Header Type (0x%02x) in Block #%u", HeadType, iBlocksCounter);
+		Printf("Unknown Header Type (0x%02x) in Block #%u\n", HeadType, iBlocksCounter);
+	}
+
+	uint16 HeaderSize;
+
+	if (HeaderSize < 7)
+	{
+		Warning("Invalid block size (%u)", HeaderSize);
+		return -1;
+	}
+
+	if (HEAD_FLAGS.ADD_SIZE_PRESENT)
+		uint32 RawDataSize;
+	else
+		local uint32 RawDataSize = 0;
+
+	if (HeadType == FILE_OR_DIR)
+	{
+		if (HEAD_FLAGS.DICTIONARY == 7)
+		{
+			++iDirs;
+			FileHeadBlock dir;
+		}
+		else
+		{
+			++iFiles;
+			FileHeadBlock file;
+		}
+	}
+	else if (HeadType == SUBBLOCK)
+	{
+		SubBlock sub;
+	}
+
+	iOfs = HeaderSize - (FTell() - iOfs);
+
+	if (iOfs > 0)
+		ubyte _reserved[iOfs];
+
+	if (RawDataSize > 0)
+		ubyte _raw[RawDataSize];
+};
+
+struct FileHeadBlock
+{
+	uint32 UnpackedSize;
+	iTotalUnpackedSize += UnpackedSize;
+
+	OsType Host_OS;
+
+	DisplayFormatHex();
+	uint32 FileCRC32;
+	DisplayFormatDecimal();
+
+	DOSTIME FileTime;
+	DOSDATE FileDate;
+	ubyte VersionToUnpack;
+
+	if (VersionToUnpack > iMaxVerToUnpack)
+		iMaxVerToUnpack = VersionToUnpack;
+	
+	if (VersionToUnpack < iMinVerToUnpack)
+		iMinVerToUnpack = VersionToUnpack;
+
+	PackMethod Method;
+	uint16 NameSize;
+
+	if (Host_OS == _Win32)
+		WinFileAttrs Attributes;
+	else if (Host_OS == _MS_DOS || Host_OS == _Mac_OS || Host_OS == _OS_2)
+		DosFileAttrs Attributes;
+	else if (Host_OS == _Unix || Host_OS == _BeOS)
+		UnixStyleAttrs Attributes;
+	else
+	{
+		DisplayFormatBinary();
+		uint32 Attributes;
+		DisplayFormatDecimal();
+	}
+
+	if (_flags & 0x100)
+	{
+		uint32 HIGH_PACK_SIZE;
+		uint32 HIGH_UNP_SIZE;
+
+		iTotalUnpackSize += (HIGH_UNP_SIZE << 32);
+	}
+
+	if (_flags & 0x200)
+	{
+		++iUniNames;
+
+		string FileName;
+		uint16 WideFileNameData[(NameSize-sizeof(FileName))/2];
+	}
+	else
+		char FileName[NameSize];
+
+	if (_flags & 0x400)
+	{
+		DisplayFormatHex();
+		uquad SALT;
+		DisplayFormatDecimal();
+	}
+};
+
+/////////////////
+
+struct SubBlock {
+	++iSubBlocks;
+
+	ubyte _unknown_to_me_1[15];
+	ubyte SubTypeLen;
+	ubyte _unknown_to_me_2[5];
+	char SubType[SubTypeLen];
+
+	Printf("*** SubBlock: %s (Block[%Lu])\n", SubType+'\0', iBlocksCounter-3);
+};
+
+/////////////////
+
+local string fn = GetFileName();
+local quad SignaturePos = 0;
+local char Signature[SignatureLen];
+
+if (Strstr(fn, ".rar") != Strlen(fn)-4)
+{
+	Warning("Seeking for RAR signature...");
+
+	local ubyte _p = 0;
+	
+	do {
+		Signature[_p] = ReadByte(SignaturePos);
+		++SignaturePos;
+
+		if (Signature[_p] == RarSignature[_p])
+			++_p;
+		else
+			_p = 0;
+	} while (_p < SignatureLen);
+
+	FSeek(SignaturePos-SignatureLen);
+	Warning("RAR signature found at 0x%08x.", FTell());
+}
+else
+{
+	ReadBytes(Signature, SignaturePos, SignatureLen);
+
+	if (Strcmp(Signature, RarSignature))
+	{
+		Warning("Invalid RAR Archive Signature!");
+		return SignaturePos;
+	}
+}
+
+RarBlock Marker;
+
+RarBlock ArcHeader;
+if (ArcHeader.HeadType != ARCHIVE)
+{
+	Warning("Main archive header is either bad or missing!");
+	return -2;
+}
+else
+{
+	if (ArcHeader.HEAD_FLAGS.BLOCK_HEADERS_ENCRYPTED)
+	{
+		Printf("It's an encrypted archive. Cannot proceed, exiting...\n");
+		return -3;
+	}
+
+	Printf("It is a %s%s %s %s RAR archive.\n", 
+		SignaturePos > 0 ? "SelF-eXtractable " : "",
+		ArcHeader.HEAD_FLAGS.ARCHIVE_LOCKED ? "LOCKED" : "non-locked",
+		ArcHeader.HEAD_FLAGS.ARCHIVE_SOLID ? "SOLID" : "regular", 
+		ArcHeader.HEAD_FLAGS.ARCHIVE_VOLUME ? "VOLUME'd" : "one-part");
+
+	if (ArcHeader.HEAD_FLAGS.ARCHIVE_COMMENT_PRESENT)
+		Printf("Main comment is present.\n");
+
+	if (ArcHeader.HEAD_FLAGS.RECOVERY_PRESENT)
+		Printf("Recovery Record is present.\n");
+}
+
+while (!FEof())
+{  
+	RarBlock block;
+}
+
+if (block.HeadType != _END_)
+{
+	Warning("END Marker block was expected here.");
+}
+
+if (iFiles || iDirs)
+{
+	Printf("Version to unpack: %u.%u\n", iMaxVerToUnpack / 10, iMaxVerToUnpack % 10);
+	if (iMinVerToUnpack != iMaxVerToUnpack)
+		Printf("Some data can also be retrieved by an earlier version of %u.%u\n", 
+			iMinVerToUnpack /10, iMinVerToUnpack %10);
+}
+
+Printf("Files: %Lu, Dirs: %Lu, SubBlocks: %Lu, Unpacked Size: %Lu\n", iFiles, iDirs, iSubBlocks, iTotalUnpackedSize);
+Printf("UNICODE Names: %Lu\n", iUniNames);
+Printf("Done. %u blocks processed.\n", iBlocksCounter);
