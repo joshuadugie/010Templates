@@ -1,0 +1,201 @@
+//------------------------------------
+//--- 010 Editor v1.2 Binary Template
+//
+// Name: AVITemplate.bt
+// Author: Blaine Lefebvre
+// Purpose: Parse an AVI file
+//------------------------------------
+
+
+// head structure info
+typedef struct {
+    DWORD  dwMicroSecPerFrame;
+    DWORD  dwMaxBytesPerSec;
+    DWORD  dwReserved1;
+    DWORD  dwFlags;
+    DWORD  dwTotalFrames;
+    DWORD  dwInitialFrames;
+    DWORD  dwStreams;
+    DWORD  dwSuggestedBufferSize;
+    DWORD  dwWidth;
+    DWORD  dwHeight;
+    DWORD  dwScale;
+    DWORD  dwRate;
+    DWORD  dwStart;
+    DWORD  dwLength;
+} MainAVIHeader;
+
+typedef struct {
+char id[4];
+uint32  datalen;
+MainAVIHeader data;
+} avihHEADER;
+
+
+// header stream structure info
+typedef struct {
+    char   fccType[4];
+    char   fccHandler[4];
+    DWORD  dwFlags;
+    DWORD  dwReserved1;
+    DWORD  dwInitialFrames;
+    DWORD  dwScale;
+    DWORD  dwRate;
+    DWORD  dwStart;
+    DWORD  dwLength;
+    DWORD  dwSuggestedBufferSize;
+    DWORD  dwQuality;
+    DWORD  dwSampleSize;
+    DWORD  xdwQuality;
+    DWORD  xdwSampleSize;
+} AVIStreamHeader;
+
+typedef struct {
+char id[4];
+uint32  datalen;
+AVIStreamHeader data;
+}strhHEADER;
+
+
+//
+typedef struct {
+char id[4];
+uint32  datalen;
+if ( datalen % 2 )
+	char data[datalen+1];
+else
+	char data[datalen];
+}strfHEADER;
+
+//
+typedef struct {
+char id[4];
+uint32  datalen;
+if ( datalen % 2 )
+	char data[datalen+1];
+else
+	char data[datalen];
+}strnHEADER;
+
+//
+typedef struct {
+char id[4];
+uint32  datalen;
+if ( datalen % 2 )
+	char data[datalen+1];
+else
+	char data[datalen];
+}genericblock;
+
+
+
+
+typedef struct {
+char id[4];
+uint32  datalen;
+char type[4];
+if ( !Memcmp(type,"hdrl",4) )
+	{
+	avihHEADER avhi;
+	}
+else if ( !Memcmp(type,"strl",4) )
+	{
+	strhHEADER strh;
+	strfHEADER strf;
+	strnHEADER strn;
+	}
+else if ( !Memcmp(type,"movi",4) )
+	{
+	local int32 pointer;
+	pointer = 0;
+	do
+	{
+	genericblock gb;
+	pointer += gb.datalen;
+Printf("pnter= %d = %d inc %d\n",pointer ,datalen,gb.datalen );
+	}
+	while ( pointer <= datalen );
+	}
+else
+	{
+	char data[datalen-4];
+	}
+} LISTHEADER;
+
+
+// junk structure info
+typedef struct {
+char id[4];
+uint32  datalen;
+if ( datalen % 2 )
+	char data[datalen+1];
+else
+	char data[datalen];
+} JUNKHEADER;
+
+
+// aviindex structure info
+typedef struct {
+    DWORD  ckid;
+    DWORD  dwFlags;
+    DWORD  dwChunkOffset;
+    DWORD  dwChunkLength;
+} AVIINDEXENTRY ;
+const DWORD AVIINDEXENTRYLEN = 16;
+
+typedef struct {
+char id[4];
+uint32  datalen;
+AVIINDEXENTRY data[datalen/AVIINDEXENTRYLEN];
+} idx1HEADER;
+
+// root structure info
+typedef struct xroot {
+char id[4];
+if ( root.id[3] == 'X' )
+	{
+	Printf("Motorola format\n");
+	BigEndian();
+	}
+else
+	{
+	Printf("Intel format\n");
+	LittleEndian();
+	}
+uint32  datalen;
+char form[4];
+if ( Strcmp(form,"AVI ") )
+	{
+	Warning("Not a valid AVI file");
+	return -1;
+	}
+} ROOT;
+
+
+
+
+local char nheader[4];
+
+ROOT root;
+while ( !FEof() )
+{
+ReadBytes(nheader,FTell(),4);
+if ( !Memcmp(nheader,"LIST",4))
+	{
+	LISTHEADER list;
+	}
+else if ( !Memcmp(nheader,"JUNK",4))
+	{
+	JUNKHEADER junk;
+	}
+else if ( !Memcmp(nheader,"idx1",4))
+	{
+	idx1HEADER idx1;
+	}
+else
+	{
+	Printf("%c%c%c%c",nheader[0],nheader[1],nheader[2],nheader[3]);
+	return -1;
+	}
+
+}
