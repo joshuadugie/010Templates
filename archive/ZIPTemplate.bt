@@ -1,0 +1,124 @@
+//-----------------------------------
+//--- 010 Editor v1.0 Binary Template
+//
+// Name:    ZIPTemplate.bt
+// Purpose: Defines a template for
+//    parsing ZIP files.
+//-----------------------------------
+
+// Define structures used in ZIP files
+
+// Defines a file record
+typedef struct {
+    // Header for the file
+    SetBackColor( cLtGray );
+    uchar    frSignature[4];    //0x04034b50
+    ushort   frVersion;
+    ushort   frFlags;
+    ushort   frCompression;
+    DOSTIME  frFileTime;
+    DOSDATE  frFileDate;
+    uint     frCrc;
+    uint     frCompressedSize;
+    uint     frUncompressedSize;
+    ushort   frFileNameLength;
+    ushort   frExtraFieldLength;
+    if( frFileNameLength > 0 )
+        char     frFileName[ frFileNameLength ];
+    if( frExtraFieldLength > 0 )
+        uchar    frExtraField[ frExtraFieldLength ];
+
+    // Compressed data
+    SetBackColor( cNone );
+    if( frCompressedSize > 0 )
+        uchar    frData[ frCompressedSize ];
+
+    // Data descriptor
+    if( frFlags & 0x04 )
+    {
+        SetBackColor( cLtAqua );
+        uint     frCrc2;
+        uint     frCompressedSize2;
+        uint     frUncompressedSize2;
+    }
+
+} ZIPFILERECORD;
+
+// Defines an entry in the directory table
+typedef struct {
+    SetBackColor( cLtPurple );
+    uchar    deSignature[4];     //0x02014b50
+    ushort   deVersionMadeBy;
+    ushort   deVersionToExtract;
+    ushort   deFlags;
+    ushort   deCompression;
+    DOSTIME  deFileTime;
+    DOSDATE  deFileDate;
+    uint     deCrc;
+    uint     deCompressedSize;
+    uint     deUncompressedSize;
+    ushort   deFileNameLength;
+    ushort   deExtraFieldLength;
+    ushort   deFileCommentLength;
+    ushort   deDiskNumberStart;
+    ushort   deInternalAttributes;
+    uint     deExternalAttributes;
+    uint     deHeaderOffset;
+    if( deFileNameLength > 0 )
+        char     deFileName[ deFileNameLength ];
+    if( deExtraFieldLength > 0 )
+        uchar    deExtraField[ deExtraFieldLength ];
+    if( deFileCommentLength > 0 )
+        uchar    deFileCommand[ deExtraFieldLength ];
+} ZIPDIRENTRY;
+
+// Defines the digital signature
+typedef struct {
+    uchar    dsSignature[4];    //0x05054b50
+    ushort   dsDataLength;
+    if( dsDataLength > 0 )
+        uchar    dsData[ dsDataLength ];
+} ZIPDIGITALSIG;
+        
+// Defines the end of central directory locator
+typedef struct {
+    uchar    elSignature[4];    //0x06054b50
+    ushort   elDiskNumber;
+    ushort   elStartDiskNumber;
+    ushort   elEntriesOnDisk;
+    ushort   elEntriesInDirectory;
+    uint     elDirectorySize;
+    uint     elDirectoryOffset;
+    ushort   elCommentLength;
+    if( elCommentLength > 0 )
+        char    elComment[ elCommentLength ];
+} ZIPENDLOCATOR;
+
+//--------------------------------------------
+
+// Define the file
+local uint tag;
+LittleEndian(); 
+while( !FEof() )
+{
+    // Read a tag
+    tag = ReadUInt( FTell() );
+
+    // Read data depending upon tag - should start with 'PK'.
+    // Note that when duplicate variables are defined, they
+    // are made into an array (see 'Using Templates and Structs'
+    // in the help file).
+    if( tag == 0x04034b50 )
+        ZIPFILERECORD   file;
+    else if( tag == 0x02014b50 )
+        ZIPDIRENTRY     dirEntry;
+    else if( tag == 0x05054b50 )
+        ZIPDIGITALSIG   digitalSig;
+    else if( tag == 0x06054b50 )
+        ZIPENDLOCATOR   endLocator;
+    else
+    {
+        Warning( "Unknown ZIP tag encountered. Template stopped." );
+        return -1;
+    }
+}
