@@ -1,11 +1,11 @@
 //-----------------------------------
-//--- 010 Editor v1.3 Binary Template
+//--- 010 Editor v2.0 Binary Template
 //
-// File:    RARTemplate.bt
+// File:    RARTemplate2.bt
 // Author:  Alexander Sherman
 // Purpose: Defines a template for
 //    parsing RAR files.
-// Revision: 5
+// Revision: 7.02
 //-----------------------------------
 
 
@@ -20,6 +20,8 @@ const string RarSignature = "Rar!" + '\x1A' + '\x07';
 ///////////////
 
 struct FileHeadBlock;
+struct OldCommentBlock;
+struct OldSubBlock;
 struct SubBlock;
 
 ///////////////
@@ -37,15 +39,19 @@ local uint16 _flags = 0;
 local uquad iBlocksCounter = 0;
 local uquad iFiles = 0;
 local uquad iDirs = 0;
+local uquad iComments = 0;
 local uquad iSubBlocks = 0;
 local uquad iUniNames = 0;
+local uquad iBadCRCCounter = 0;
 local ubyte iMinVerToUnpack = 0xff;
 local ubyte iMaxVerToUnpack = 0;
 local uquad iTotalUnpackedSize = 0;
+local uint iAV1 = 0;
+local uint iAV2 = 0;
 
 ////////////////
 
-enum <byte> OsType 
+enum <ubyte> OsType 
 { 
 	_MS_DOS, _OS_2, _Win32, _Unix, _Mac_OS, _BeOS 
 };
@@ -53,6 +59,11 @@ enum <byte> OsType
 enum <char> PackMethod 
 { 
 	Store='0', Fastest, Fast, Normal, Good, Best 
+};
+
+enum <uint16> SubType_OldStyle
+{
+	OS2_EA = 0x0100
 };
 
 struct UnixStyleAttrs
@@ -158,9 +169,9 @@ struct RarBlock
 {
 	local quad iOfs = FTell();
 
-	DisplayFormatHex();
-	uint16 HEAD_CRC;
-	DisplayFormatDecimal();
+	SetForeColor(cRed);
+	uint16 HEAD_CRC <format=hex>;
+	SetForeColor(cBlack);
 
 	RarBlockType HeadType;
 
@@ -185,8 +196,20 @@ struct RarBlock
 
 	if (HeaderSize < 7)
 	{
-		Warning("Invalid block size (%u)", HeaderSize);
+		Warning("Invalid block size (%u) in Block #%u", HeaderSize, iBlocksCounter);
+		Printf("Invalid block size (%u) in Block #%u\n", HeaderSize, iBlocksCounter);
 		return -1;
+	}
+
+	if (HeadType != MARKER)
+	{
+		local uint16 crcCheck = Checksum(CHECKSUM_CRC32, startof(HeadType), HeaderSize-sizeof(HEAD_CRC)) & 0xFFFF;
+		if (crcCheck != HEAD_CRC)
+		{
+			Warning("Header CRC mismatch in Block #%u", iBlocksCounter);
+			Printf("Header CRC mismatch in Block #%u\n", iBlocksCounter);
+			++iBadCRCCounter;
+		}
 	}
 
 	if (HEAD_FLAGS.ADD_SIZE_PRESENT)
@@ -194,8 +217,13 @@ struct RarBlock
 	else
 		local uint32 RawDataSize = 0;
 
-	if (HeadType == FILE_OR_DIR)
-	{
+	switch (HeadType) {
+	case ARCHIVE:
+		uint16 _reserved1;
+		uint32 _reserved2;
+		if (HEAD_FLAGS.ARCHIVE_COMMENT_PRESENT) struct RarBlock MainComment;
+		break;
+	case FILE_OR_DIR:
 		if (HEAD_FLAGS.DICTIONARY == 7)
 		{
 			++iDirs;
@@ -206,10 +234,24 @@ struct RarBlock
 			++iFiles;
 			FileHeadBlock file;
 		}
-	}
-	else if (HeadType == SUBBLOCK)
-	{
+		break;
+	case COMMENT_OLD:
+		OldCommentBlock cmm;
+		break;
+	case SUBBLOCK_OLD:
+		OldSubBlocksub;
+		break;
+	case SUBBLOCK:
 		SubBlock sub;
+		break;
+	case AV_OLD_1:
+		++iAV1;
+		Printf("*** AV was found (RAR v. < 2.60) @ block #%Lu.\n", iBlocksCounter);
+		break;
+	case AV_OLD_2:
+		++iAV2;
+		Printf("*** AV was found (RAR v. 2.60 - 2.9x) @ block #%Lu.\n", iBlocksCounter);
+		break;
 	}
 
 	iOfs = HeaderSize - (FTell() - iOfs);
@@ -227,11 +269,7 @@ struct FileHeadBlock
 	iTotalUnpackedSize += UnpackedSize;
 
 	OsType Host_OS;
-
-	DisplayFormatHex();
-	uint32 FileCRC32;
-	DisplayFormatDecimal();
-
+	uint32 FileCRC32 <format=hex>;
 	DOSTIME FileTime;
 	DOSDATE FileDate;
 	ubyte VersionToUnpack;
@@ -245,20 +283,24 @@ struct FileHeadBlock
 	PackMethod Method;
 	uint16 NameSize;
 
-	if (Host_OS == _Win32)
+	switch (Host_OS) {
+	case _Win32:
 		WinFileAttrs Attributes;
-	else if (Host_OS == _MS_DOS || Host_OS == _Mac_OS || Host_OS == _OS_2)
+		break;
+	case _MS_DOS:
+	case _Mac_OS:
+	case _OS_2:
 		DosFileAttrs Attributes;
-	else if (Host_OS == _Unix || Host_OS == _BeOS)
+		break;
+	case _Unix:
+	case _BeOS:
 		UnixStyleAttrs Attributes;
-	else
-	{
-		DisplayFormatBinary();
-		uint32 Attributes;
-		DisplayFormatDecimal();
+		break;
+	default:
+		uint32 Attributes <format=binary>;
 	}
 
-	if (_flags & 0x100)
+	if (_flags & 0x0100)
 	{
 		uint32 HIGH_PACK_SIZE;
 		uint32 HIGH_UNP_SIZE;
@@ -266,7 +308,7 @@ struct FileHeadBlock
 		iTotalUnpackSize += (HIGH_UNP_SIZE << 32);
 	}
 
-	if (_flags & 0x200)
+	if (_flags & 0x0200)
 	{
 		++iUniNames;
 
@@ -276,15 +318,36 @@ struct FileHeadBlock
 	else
 		char FileName[NameSize];
 
-	if (_flags & 0x400)
+	if (_flags & 0x0008)
 	{
-		DisplayFormatHex();
-		uquad SALT;
-		DisplayFormatDecimal();
+		RarBlock FileComment; // used in RAR v. <= 3.11
 	}
+
+	if (_flags & 0x0400)
+		uquad SALT <format=hex>;
 };
 
 /////////////////
+
+struct OldCommentBlock {
+	++iComments;
+
+	uint16 UnpackedSize;
+	ubyte VersionToUnpack;
+	PackMethod Method;
+	uint16 CommentCRC <format=hex>;
+	
+	Printf("*** Old style CommentBlock:  (Block #%Lu)\n", iBlocksCounter);
+};
+
+struct OldSubBlock {
+	++iSubBlocks;
+	
+	SubType_OldStyle SubType;
+	ubyte _reserved;
+	
+	Printf("*** Old style SubBlock: %u (Block #%Lu)\n", SubType, iBlocksCounter);
+};
 
 struct SubBlock {
 	++iSubBlocks;
@@ -294,7 +357,18 @@ struct SubBlock {
 	ubyte _unknown_to_me_2[5];
 	char SubType[SubTypeLen];
 
-	Printf("*** SubBlock: %s (Block[%Lu])\n", SubType+'\0', iBlocksCounter-3);
+	Printf("*** SubBlock: %s (Block #%Lu)\n", SubType+'\0', iBlocksCounter);
+	switch (SubType) {
+	case "CMT":
+		++iComments;
+		break;
+	case "AV":
+		Printf("*** Authenticity Verification info (RAR v. 3.x) @ block #%Lu.\n", iBlocksCounter);
+		break;
+	case "RR":
+		Printf("*** Recovery Record was found (RAR v. 3.x) @ block #%Lu.\n", iBlocksCounter);
+		break;
+	}
 };
 
 /////////////////
@@ -307,20 +381,17 @@ if (Strstr(fn, ".rar") != Strlen(fn)-4)
 {
 	Warning("Seeking for RAR signature...");
 
-	local ubyte _p = 0;
-	
-	do {
-		Signature[_p] = ReadByte(SignaturePos);
-		++SignaturePos;
+	local quad _p = FindFirst(RarSignature);
+	if (_p >= 0)
+		FSeek(_p);
+	else
+	{
+		Warning("Not a RAR archive!");
+		return -1;
+	}
 
-		if (Signature[_p] == RarSignature[_p])
-			++_p;
-		else
-			_p = 0;
-	} while (_p < SignatureLen);
-
-	FSeek(SignaturePos-SignatureLen);
-	Warning("RAR signature found at 0x%08x.", FTell());
+	Warning("RAR signature found at 0x%08x.", _p);
+	Printf("RAR signature found at 0x%08x.\n", _p);
 }
 else
 {
@@ -343,12 +414,6 @@ if (ArcHeader.HeadType != ARCHIVE)
 }
 else
 {
-	if (ArcHeader.HEAD_FLAGS.BLOCK_HEADERS_ENCRYPTED)
-	{
-		Printf("It's an encrypted archive. Cannot proceed, exiting...\n");
-		return -3;
-	}
-
 	Printf("It is a %s%s %s %s RAR archive.\n", 
 		SignaturePos > 0 ? "SelF-eXtractable " : "",
 		ArcHeader.HEAD_FLAGS.ARCHIVE_LOCKED ? "LOCKED" : "non-locked",
@@ -357,9 +422,16 @@ else
 
 	if (ArcHeader.HEAD_FLAGS.ARCHIVE_COMMENT_PRESENT)
 		Printf("Main comment is present.\n");
-
+	if (ArcHeader.HEAD_FLAGS.AV_PRESENT)
+		Printf("Old style Authenticity Verification is present.\n");
 	if (ArcHeader.HEAD_FLAGS.RECOVERY_PRESENT)
 		Printf("Recovery Record is present.\n");
+
+	if (ArcHeader.HEAD_FLAGS.BLOCK_HEADERS_ENCRYPTED)
+	{
+		Printf("It's an encrypted archive. Cannot proceed, exiting...\n");
+		return -3;
+	}
 }
 
 while (!FEof())
@@ -367,7 +439,7 @@ while (!FEof())
 	RarBlock block;
 }
 
-if (block.HeadType != _END_)
+if (block.HeadType != _END_ && iMaxVerToUnpack > 20)
 {
 	Warning("END Marker block was expected here.");
 }
@@ -380,6 +452,8 @@ if (iFiles || iDirs)
 			iMinVerToUnpack /10, iMinVerToUnpack %10);
 }
 
-Printf("Files: %Lu, Dirs: %Lu, SubBlocks: %Lu, Unpacked Size: %Lu\n", iFiles, iDirs, iSubBlocks, iTotalUnpackedSize);
+Printf("Files: %Lu, Dirs: %Lu, Comments: %Lu, SubBlocks: %Lu, Unpacked Size: %Lu\n", iFiles, iDirs, iComments, iSubBlocks, iTotalUnpackedSize);
 Printf("UNICODE Names: %Lu\n", iUniNames);
+if (iBadCRCCounter)
+	Printf("%u blocks corrupted.\n", iBadCRCCounter);
 Printf("Done. %u blocks processed.\n", iBlocksCounter);
