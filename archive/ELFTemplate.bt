@@ -1,0 +1,315 @@
+//----------------------------------------
+//--- 010 Editor v2.0 Binary Template
+//
+// File:     ELFTemplate.bt
+// Author:   
+// Revision: 1.0
+// Purpose:  Defines a template for
+//    parsing ELF 32-bit and 64-bit files.
+//    It parses only the execution view 
+//    used for instantiating processes.
+//----------------------------------------
+
+// Define structures used in ELF files
+
+// ELF Header Types
+// ELF identification element
+typedef enum <uchar> {
+			ELFCLASSNONE	=0,
+			ELFCLASS32	=1,
+			ELFCLASS64	=2
+		      }ei_class_2_e;
+
+typedef enum <uchar> {
+			ELFDATAONE	=0,
+			ELFDATA2LSB	=1,
+			ELFDATA2MSB	=2
+		      }ei_data_e;
+
+typedef enum <uchar> {
+			E_NONE		=0,
+			E_CURRENT	=1
+		      }ei_version_e;
+
+typedef enum <uchar> {
+			ELFOSABI_NONE	=0,	//No extensions or unspecified	
+			ELFOSABI_HPUX	=1,	//Hewlett-Packard HP-UX	
+			ELFOSABI_NETBSD	=2,	//NetBSD	
+			ELFOSABI_SOLARIS=6,	//Sun Solaris	
+			ELFOSABI_AIX	=7,	//AIX	
+			ELFOSABI_IRIX	=8,	//IRIX	
+			ELFOSABI_FREEBSD=9,	//FreeBSD	
+			ELFOSABI_TRU64	=10,	//Compaq TRU64 UNIX	
+			ELFOSABI_MODESTO=11,	//Novell Modesto	
+			ELFOSABI_OPENBSD=12,	//Open BSD	
+			ELFOSABI_OPENVMS=13,	//Open VMS	
+			ELFOSABI_NSK	=14,	//Hewlett-Packard Non-Stop Kernel	
+			ELFOSABI_AROS	=15	//Amiga Research OS
+		      }ei_osabi_e;
+
+
+typedef struct {
+	char		file_identification[4];
+	ei_class_2_e	ei_class_2;
+	ei_data_e	ei_data;
+	ei_version_e	ei_version;
+	ei_osabi_e	ei_osabi;
+	uchar	ei_abiversion;
+	uchar	ei_pad[6];
+	uchar	ei_nident_SIZE;
+} e_ident_t;
+
+// Elf Data Types for 32/64 bit
+//32 bit
+typedef	uint32 Elf32_Word;
+typedef uint32 Elf32_Off;
+typedef uint32 Elf32_Addr;
+typedef uint16 Elf32_Half;
+//64 bit
+typedef	uint32 Elf64_Word;
+typedef uint64 Elf64_Off;
+typedef uint64 Elf64_Addr;
+typedef uint16 Elf64_Half;
+typedef uint64 Elf64_Xword;
+
+typedef enum <Elf32_Half> {
+			ET_NONE		=0,
+			ET_REL		=1,
+			ET_EXEC		=2,
+			ET_DYN		=3,
+			ET_CORE		=4,
+			ET_LOOS		=0xfe00,
+			ET_HIOS		=0xfeff,
+			ET_LOPROC	=0xff00,
+			ET_HIPROC	=0xffff
+		      }e_type32_e;
+typedef e_type32_e e_type64_e;
+
+typedef enum <Elf32_Half> {	// list has to to be completed
+	EM_NONE		=0,	//No machine	
+	EM_M32		=1,	//AT&T WE 32100	
+	EM_SPARC	=2,	//SPARC	
+	EM_386		=3,	//Intel 80386	
+	EM_68K		=4,	//Motorola 68000	
+	EM_88K		=5,	//Motorola 88000	
+	reserved6	=6,	//Reserved for future use (was EM_486)	
+	EM_860		=7,	//Intel 80860	
+	EM_MIPS		=8,	//MIPS I Architecture	
+	EM_S370		=9,	//IBM System/370 Processor	
+	EM_MIPS_RS3_LE	=10,	//MIPS RS3000 Little-endian	
+	reserved11	=11,	//Reserved for future use
+	reserved12	=12,	//Reserved for future use
+	reserved13	=13,	//Reserved for future use	
+	reserved14	=14,	//Reserved for future use
+	EM_PARISC	=15,	//Hewlett-Packard PA-RISC	
+	reserved16	=16,	//Reserved for future use	
+	EM_VPP500	=17,	//Fujitsu VPP500	
+	EM_SPARC32PLUS	=18,	//Enhanced instruction set SPARC	
+	EM_960		=19,	//Intel 80960	
+	EM_PPC		=20,	//PowerPC	
+	EM_PPC64	=21,	//64-bit PowerPC	
+	EM_S390		=22,	//IBM System/390 Processor	
+	reserved23	=23,	//Reserved for future use	
+	reserved24	=24,	//Reserved for future use	
+	reserved25	=25,	//Reserved for future use	
+	reserved26	=26,	//Reserved for future use	
+	reserved27	=27,	//Reserved for future use	
+	reserved28	=28,	//Reserved for future use	
+	reserved29	=29,	//Reserved for future use	
+	reserved30	=30,	//Reserved for future use	
+	reserved31	=31,	//Reserved for future use	
+	reserved32	=32,	//Reserved for future use	
+	reserved33	=33,	//Reserved for future use	
+	reserved34	=34,	//Reserved for future use	
+	reserved35	=35,	//Reserved for future use	
+	EM_V800		=36,	//NEC V800	
+	EM_FR20		=37,	//Fujitsu FR20	
+	EM_RH32		=38,	//TRW RH-32	
+	EM_RCE		=39,	//Motorola RCE	
+	EM_ARM		=40,	//Advanced RISC Machines ARM	
+	EM_ALPHA	=41,	//Digital Alpha	
+	EM_SH		=42,	//Hitachi SH	
+	EM_SPARCV9	=43,	//SPARC Version 9	
+	EM_TRICORE	=44,	//Siemens TriCore embedded processor	
+	EM_ARC		=45,	//Argonaut RISC Core, Argonaut Technologies Inc.	
+	EM_H8_300	=46,	//Hitachi H8/300	
+	EM_H8_300H	=47,	//Hitachi H8/300H	
+	EM_H8S		=48,	//Hitachi H8S	
+	EM_H8_500	=49,	//Hitachi H8/500	
+	EM_IA_64	=50,	//Intel IA-64 processor architecture	
+	EM_MIPS_X	=51,	//Stanford MIPS-X	
+	EM_COLDFIRE	=52,	//Motorola ColdFire	
+	EM_68HC12	=53,	//Motorola M68HC12	
+	EM_MMA		=54,	//Fujitsu MMA Multimedia Accelerator	
+	EM_PCP		=55,	//Siemens PCP	
+	EM_NCPU		=56,	//Sony nCPU embedded RISC processor	
+	EM_NDR1		=57,	//Denso NDR1 microprocessor	
+	EM_STARCORE	=58,	//Motorola Star*Core processor	
+	EM_ME16		=59,	//Toyota ME16 processor	
+	EM_ST100	=60,	//STMicroelectronics ST100 processor	
+	EM_TINYJ	=61,	//Advanced Logic Corp. TinyJ embedded processor family	
+	EM_X86_64	=62,	//AMD x86-64 architecture	
+	EM_PDSP		=63,	//Sony DSP Processor	
+	EM_PDP10	=64,	//Digital Equipment Corp. PDP-10	
+	EM_PDP11	=65,	//Digital Equipment Corp. PDP-11	
+	EM_FX66		=66,	//Siemens FX66 microcontroller	
+	EM_ST9PLUS	=67,	//STMicroelectronics ST9+ 8/16 bit microcontroller	
+	EM_ST7		=68,	//STMicroelectronics ST7 8-bit microcontroller	
+	EM_68HC16	=69,	//Motorola MC68HC16 Microcontroller	
+	EM_68HC11	=70,	//Motorola MC68HC11 Microcontroller	
+	EM_68HC08	=71,	//Motorola MC68HC08 Microcontroller	
+	EM_68HC05	=72,	//Motorola MC68HC05 Microcontroller	
+	EM_SVX		=73,	//Silicon Graphics SVx	
+	EM_ST19		=75,	//Digital VAX	
+	EM_CRIS		=76,	//Axis Communications 32-bit embedded processor	
+	EM_JAVELIN	=77,	//Infineon Technologies 32-bit embedded processor	
+	EM_FIREPATH	=78,	//Element 14 64-bit DSP Processor	
+	EM_ZSP		=79,	//LSI Logic 16-bit DSP Processor	
+	EM_MMIX		=80,	//Donald Knuth's educational 64-bit processor	
+	EM_HUANY	=81,	//Harvard University machine-independent object files	
+	EM_PRISM	=82,	//SiTera Prism	
+	EM_AVR		=83,	//Atmel AVR 8-bit microcontroller	
+	EM_FR30		=84,	//Fujitsu FR30	
+	EM_D10V		=85,	//Mitsubishi D10V	
+	EM_D30V		=86,	//Mitsubishi D30V	
+	EM_V850		=87,	//NEC v850	
+	EM_M32R		=88,	//Mitsubishi M32R	
+	EM_MN10300	=89,	//Matsushita MN10300	
+	EM_MN10200	=90,	//Matsushita MN10200	
+	EM_PJ		=91,	//picoJava	
+	EM_OPENRISC	=92,	//OpenRISC 32-bit embedded processor	
+	EM_ARC_A5	=93,	//ARC Cores Tangent-A5	
+	EM_XTENSA	=94,	//Tensilica Xtensa Architecture	
+	EM_VIDEOCORE	=95,	//Alphamosaic VideoCore processor	
+	EM_TMM_GPP	=96,	//Thompson Multimedia General Purpose Processor	
+	EM_NS32K	=97,	//National Semiconductor 32000 series	
+	EM_TPC		=98,	//Tenor Network TPC processor	
+	EM_SNP1K	=99,	//Trebia SNP 1000 processor	
+	EM_ST200	=100,	//STMicroelectronics (www.st.com) ST200 microcontroller	
+	EM_IP2K		=101,	//Ubicom IP2xxx microcontroller family	
+	EM_MAX		=102,	//MAX Processor	
+	EM_CR		=103,	//National Semiconductor CompactRISC microprocessor	
+	EM_F2MC16	=104,	//Fujitsu F2MC16	
+	EM_MSP430	=105,	//Texas Instruments embedded microcontroller msp430	
+	EM_BLACKFIN	=106,	//Analog Devices Blackfin (DSP) processor	
+	EM_SE_C33	=107,	//S1C33 Family of Seiko Epson processors	
+	EM_SEP		=108,	//Sharp embedded microprocessor	
+	EM_ARCA		=109,	//Arca RISC Microprocessor	
+	EM_UNICORE	=110	//Microprocessor series from PKU-Unity Ltd. and MPRC of Peking University
+		      }e_machine32_e;
+
+typedef e_machine32_e e_machine64_e;
+
+typedef enum <Elf32_Word> {
+			EV_NONE		=0,
+			EV_CURRENT	=1
+		      }e_version32_e;
+typedef e_version32_e e_version64_e;
+
+
+// Program Header Types
+typedef enum <Elf32_Word> {
+			PT_NULL		=0,
+			PT_LOAD		=1,
+			PT_DYNAMIC	=2,
+			PT_INERP	=3,
+			PT_NOTE		=4,
+			PT_SHLIB	=5,
+			PT_PHDR		=6,
+			PT_LOOS		=0x60000000,
+			PT_HIOS		=0x6fffffff,
+			PT_LOPROC	=0x70000000,
+			PT_HIPROC	=0x7fffffff
+		      }p_type32_e;
+typedef p_type32_e p_type64_e;
+
+typedef enum <Elf32_Word> {
+			___	=0,
+			__X	=1,
+			_W_	=2,
+			_WX	=3,
+			R__	=4,
+			R_X	=5,
+			RW_	=6,
+			RWX	=7
+		      }p_flags32_e;
+typedef p_flags32_e p_flags64_e;
+
+// Program Table 32/64 bit
+typedef struct {  //32bit 
+	p_type32_e  p_type;
+	Elf32_Off   p_offset_FROM_FILE_BEGIN;
+	Elf32_Addr  p_vaddr_VIRTUAL_ADDRESS;
+	Elf32_Addr  p_paddr_PHYSICAL_ADDRESS;	
+	Elf32_Word  p_filesz_SEGMENT_FILE_LENGTH;
+	Elf32_Word  p_memsz_SEGMENT_RAM_LENGTH;	
+	p_flags32_e p_flags;
+	Elf32_Word  p_align; 
+} program_table_entry32_t;
+typedef struct {  //64bit 
+	p_type64_e  p_type;
+	p_flags64_e p_flags;
+	Elf64_Off   p_offset_FROM_FILE_BEGIN;
+	Elf64_Addr  p_vaddr_VIRTUAL_ADDRESS;
+	Elf64_Addr  p_paddr_PHYSICAL_ADDRESS;	
+	Elf64_Xword p_filesz_SEGMENT_FILE_LENGTH;
+	Elf64_Xword p_memsz_SEGMENT_RAM_LENGTH;	
+	Elf64_Xword p_align; 
+} program_table_entry64_t;
+
+
+// Structure of elf
+	struct FILE {
+	       	struct ELF_HEADER {
+			e_ident_t  	e_ident;
+			if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 )
+			{
+			//32-Bit definitions of ELF Header
+            		e_type32_e 	e_type;
+	    		e_machine32_e 	e_machine;
+	    		e_version32_e 	e_version;
+			Elf32_Addr 	e_entry_START_ADDRESS;
+			Elf32_Off	e_phoff_PROGRAM_HEADER_OFFSET_IN_FILE;
+			Elf32_Off  	e_shoff_SECTION_HEADER_OFFSET_IN_FILE;
+			Elf32_Word  	e_flags;
+			Elf32_Half 	e_ehsize_ELF_HEADER_SIZE;
+			Elf32_Half 	e_phentsize_PROGRAM_HEADER_ENTRY_SIZE_IN_FILE;
+			Elf32_Half 	e_phnum_NUMBER_OF_PROGRAM_HEADER_ENTRIES;
+			Elf32_Half 	e_shentzise_SECTION_HEADER_ENTRY_SIZE;
+			Elf32_Half 	e_shnum_NUMBER_OF_SECTION_HEADER_ENTRIES;									    
+			Elf32_Half 	e_shtrndx_STRING_TABLE_INDEX;
+			}
+			else
+			{
+			//64-Bit definitions of ELF Header
+            		e_type64_e 	e_type;
+	    		e_machine64_e 	e_machine;
+	    		e_version64_e 	e_version;
+			Elf64_Addr 	e_entry_START_ADDRESS;
+			Elf64_Off	e_phoff_PROGRAM_HEADER_OFFSET_IN_FILE;
+			Elf64_Off  	e_shoff_SECTION_HEADER_OFFSET_IN_FILE;
+			Elf32_Word  	e_flags;
+			Elf64_Half 	e_ehsize_ELF_HEADER_SIZE;
+			Elf64_Half 	e_phentsize_PROGRAM_HEADER_ENTRY_SIZE_IN_FILE;
+			Elf64_Half 	e_phnum_NUMBER_OF_PROGRAM_HEADER_ENTRIES;
+			Elf64_Half 	e_shentzise_SECTION_HEADER_ENTRY_SIZE;
+			Elf64_Half 	e_shnum_NUMBER_OF_SECTION_HEADER_ENTRIES;									    
+			Elf64_Half 	e_shtrndx_STRING_TABLE_INDEX;
+			}		
+        	} elf_header;
+		struct PROGRAM_HEADER_TABLE {
+			if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 )
+			{
+			//32-Bit definitions of Program Table
+			program_table_entry32_t	program_table_element[file.elf_header.e_phnum_NUMBER_OF_PROGRAM_HEADER_ENTRIES];
+			}
+			else
+			{
+			//64-Bit definitions of Program Table
+
+			program_table_entry64_t	program_table_element[file.elf_header.e_phnum_NUMBER_OF_PROGRAM_HEADER_ENTRIES];
+			}
+
+		} program_header_table;
+		
+    } file;
