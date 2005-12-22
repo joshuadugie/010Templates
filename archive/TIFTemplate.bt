@@ -1,0 +1,375 @@
+//--------------------------------------
+//--- 010 Editor v2.0.1 Binary Template
+//
+//    File: TIFTemplate.bt
+//  Author: Kevin O. Grover <kogrover@yahoo.com>
+// Purpose: A template for parsing TIFF (Tagged Image File Format) files.
+// Version: $Revision: 1.7 $
+// History:
+// 2005-05-09  KOG  Initial version
+// 2005-05-11  KOG  *Many* more TIFF Tag IDs (generated with a Perl script)
+// 2005-05-19  KOG  Added new iFax tags and best guess for MS Fax Tags
+// 2005-06-30  KOG  Updated MSFax Tag list
+//
+// This template was written to the TIFF6 specification.  You can get the TIFF 
+// documentation from Adobe (http://www.adobe.com) after registering, or
+// from the libtiff home page (http://www.libtiff.org).
+//
+// NOTE: This is NOT a comprehensive list of TIFF tags.  Many are tags
+//       registered as private and not reported anywhere.  If you run
+//       across any definitions, forward them to me and I'll add them
+//       to this template.
+//--------------------------------------
+
+// TODO
+// - ADD: ??Color highlighting?? (ENT=gray, DATA=??, EXTERNAL DATA=??)
+// - Types to Test: eBYTE, eSBYTE, eSSHORT, eSLONG, eFLOAT, eDOUBLE
+
+// Check the Byte Order Mark to determine if file is Little or Big Endian
+local uint16 tbom;
+tbom = ReadUShort(0);
+if      (tbom == 0x4949) { LittleEndian(); }
+else if (tbom == 0x4D4D) { BigEndian(); }
+else {
+  Warning("Invalid TIFF File: Bad BOM (Byte Order Mark).  Template Terminated.");
+  return -1;
+}
+
+local quad nextIFD = 0;                // Pointer to next IFD (or 0)
+
+// DO NOT EDIT. This structure is generated from TIFF_Tags.pl
+// enum of TAG ids
+typedef enum <uint16> eTAG {
+  GPSVersionID=0,GPSLatitudeRef,GPSLatitude,GPSLongitudeRef,GPSLongitude,GPSAltitudeRef,GPSAltitude,GPSTimeStamp,GPSSatellites,GPSStatus,GPSMeasureMode,GPSDOP,GPSSpeedRef,GPSSpeed,GPSTrackRef,GPSTrack,GPSImgDirectionRef,GPSImgDirection,GPSMapDatum,GPSDestLatitudeRef,GPSDestLatitude,GPSDestLongitudeRef,GPSDestLongitude,GPSDestBearingRef,GPSDestBearing,GPSDestDistanceRef,GPSDestDistance,GPSProcessingMethod,GPSAreaInformation,GPSDateStamp,GPSDifferential,
+  NewSubFileType=254,SubFileType,ImageWidth,ImageLength,BitsPerSample,Compression,
+  PhotometricInterpretation=262,Thresholding,CellWidth,CellLength,FillOrder,
+  DocumentName=269,ImageDescription,Make,Model,StripOffsets,Orientation,
+  SamplesPerPixel=277,RowsPerStrip,StripByteCounts,MinSampleValue,MaxSampleValue,XResolution,YResolution,PlanarConfiguration,PageName,XPosition,YPosition,FreeOffsets,FreeByteCounts,GrayResponseUnit,GrayResponseCurve,Group3Options,Group4Options,
+  ResolutionUnit=296,PageNumber,
+  ColorResponseUnit=300,TransferFunction,
+  Software=305,DateTime,
+  Artist=315,HostComputer,Predictor,WhitePoint,PrimaryChromacities,ColorMap,HalftoneHints,TileWidth,TileLength,TileOffsets,TileByteCounts,BadFaxLines,CleanFaxData,ConsecutiveBadFaxLines,
+  SubIFDs=330,
+  InkSet=332,InkNames,NumberOfInks,
+  DotRange=336,TargetPrinter,ExtraSamples,SampleFormat,SMinSampleValue,SMaxSampleValue,TransferRange,ClipPath,XClipPathUnits,YClipPathUnits,Indexed,JPEGTables,
+  OPIProxy=351,
+  GlobalParametersIFD=400,ProfileType,FaxProfile,CodingMethods,VersionYear,ModeNumber,
+  JPEGProc=512,JPEGInterchangeFormat,JPEGInterchangeFormatLength,JPEGRestartInterval,
+  JPEGLosslessPredictors=517,JPEGPointTransforms,JPEGQTables,JPEGDCTables,JPEGACTables,
+  YCbCrCoefficients=529,YCbCrSubsampling,YCbCrPositioning,ReferenceBlackWhite,
+  XMP=700,
+  ImageID=32781,
+  Wang_Annotation=32932,
+  Matteing=32995,DataType,ImageDepth,TileDepth,
+  CFARepeatPatternDim=33421,CFAPattern,BatteryLevel,
+  Copyright=33432,
+  ExposureTime=33434,
+  FNumber=33437,
+  ModelPixelScaleTag=33550,
+  IPTC_NAA=33723,
+  INGR_Packet_Data_Tag=33918,INGR_Flag_Registers,IntergraphMatrixTag,
+  ModelTiepointTag=33922,
+  Site=34016,ColorSequence,IT8Header,RasterPadding,BitsPerRunLength,BitsPerExtendedRunLength,ColorTable,ImageColorIndicator,BackgroundColorIndicator,ImageColorValue,BackgroundColorValue,PixelInensityRange,TransparencyIndicator,ColorCharacterization,HCUsage,
+  ModelTransformationTag=34264,
+  PhotoshopImageResources=34377,
+  ExifIFD=34665,
+  InterColourProfile=34675,
+  GeoKeyDirectoryTag=34735,GeoDoubleParamsTag,GeoAsciiParamsTag,
+  ExposureProgram=34850,
+  SpectralSensitibity=34852,GPSInfo,
+  ISOSpeedRatings=34855,OECF,Interlace,TimeZoneOffset,SelfTimerMode,
+  FaxRecvParams=34908,FaxSubAddress,FaxRecvTime,
+  ExifVersion=36864,
+  DateTimeOriginal=36867,DateTimeDigitized,
+  ComponentsConfiguration=37121,CompressedBitsPerPixel,
+  ShutterSpeedValue=37377,ApertureValue,BrightnessValue,ExposureBiasValue,MaxApertureValue,SubjectDistance,MeteringMode,LightSource,Flash,FocalLength,FlashEnergy,SpatialFrequencyResponse,Noise,FocalPlaneXResolution,FocalPlaneYResolution,FocalPlaneResolutionUnit,ImageNumber,SecurityClassification,ImageHistory,SubjectArea,ExposureIndex,TIFF_EPStandardID,SensingMethod,
+  StoNits=37439,
+  MakerNote=37500,
+  UserComment=37510,
+  SubSecTime=37520,SubSecTimeOriginal,SubSecTimeDigitized,
+  ImageSourceData=37724,
+  MSFax_CSID=40001,MSFax_TSID,MSFax_Device,MSFax_RoutingInfo,MSFax_CallerID,MSFax_RecipientName,MSFax_RecipientFaxNumber,MSFax_RecipientCompany,MSFax_RecipientAddress,MSFax_RecipientStreet,MSFax_RecipientCity,MSFax_RecipientZipCode,MSFax_RecipientCountry,MSFax_RecipientTitle,MSFax_RecipientDepartment,MSFax_RecipientOffice,MSFax_RecipientOfficePhone,MSFax_RecipientHomePhone,MSFax_Recipient40019,MSFax_RecipientEmail,MSFax_SenderName,MSFax_SenderFaxNumber,MSFax_SenderCompany,MSFax_SenderAddress,MSFax_SenderStreet,MSFax_SenderCity,MSFax_SenderZipCode,MSFax_SenderCountry,MSFax_SenderTitle,MSFax_SenderDepartment,MSFax_SenderOffice,MSFax_SenderOfficePhone,MSFax_SenderHomePhone,MSFax_Sender40034,MSFax_SenderEmail,MSFax_BillingCode,MSFax_UserName,MSFax_40038,MSFax_Document,MSFax_CoverPageSubject,MSFax_Retries,MSFax_Priority,MSFax_ParentJobID,MSFax_SubmissionTime,MSFax_Scheduled,MSFax_TotalPages,MSFax_Type,MSFax_40048,MSFax_ErrorCode,MSFax_40050,MSFax_StartTime,MSFax_EndTime,MSFax_40053,
+  FlashpixVersion=40960,ColorSpace,PixelXDimension,PixelYDimension,RelatedSoundFile,InteroperabilityIFD,
+  FlashEnergy_Exif=41483,SpatialFrequencyResponse_Exif,
+  FocalPlaneXResolution_Exif=41486,FocalPlaneYResolution_Exif,FocalPlaneResolutionUnit_Exif,
+  SubjectLocation_Exif=41492,ExposureIndex_Exif,
+  SensingMethod_Exif=41495,
+  FileSource=41728,SceneType,CFAPattern_Exif,
+  CustomRendered=41985,ExposureMode,WhiteBalance,DigitalZoomRatio,FocalLengthIn35mmFilm,SceneCaptureType,GainControl,Contrast,Saturation,Sharpness,DeviceSettingDescription,SubjectDistanceRange,
+  GDAL_METADATA=42112,GDAL_NODATA,
+  Oce_Scanjob_Description=50215,Oce_Application_Selector,Oce_Identification_Number,Oce_ImageLogic_Characteristics,
+  PhotoshopAnnotations=50255,
+  DNGVersion=50706,DNGBackwardVersion,UniqueCameraModel,LocalizedCameraModel,CFAPlaneColor,CFALayout,LinearizationTable,BlackLevelRepeatDim,BlackLevel,BlackLevelDeltaH,BlackLevelDeltaV,WhiteLevel,DefaultScale,DefaultCropOrigin,DefaultCropSize,ColorMatrix1,ColorMatrix2,CameraCalibration1,CameraCalibration2,ReductionMatrix1,ReductionMatrix2,AnalogBalnace,AsShortNeutral,AsShortWhiteXY,BaselineExposure,BaselineNoise,BaselineSharpness,BayerGreenSplit,LinearResponseLimit,CameraSerialNumber,LensInfo,ChromaBlurRadius,AntiAliasStrength,
+  DNGPrivateDatea=50740,MakerNoteSafety,
+  CalibrationIlluminant1=50778,CalibrationIlluminant2,BestQualityScale,
+  Alias_Layer_Metadata=50784
+} TAG;
+
+// enum of TAG types
+typedef enum <uint16> eTAGTYPE {
+  eBYTE=1, eASCII, eSHORT, eLONG, eRATIONAL,
+  eSBYTE, eUNDEF, eSSHORT, eSLONG, eSRATIONAL,
+  eFLOAT, eDOUBLE
+} TAGTYPE;
+
+//enum for Compression types
+typedef enum <uint16> eCOMP {
+  Uncompressed=1,CCITT_1D,Group3Fax,Group4Fax,LZW,JPEG,JPEG2,
+  Deflate=8,
+  NeXT2Bit=32766,CCITT_RLE=32771,PackBits=32773,
+  ThunderScan4bit=32809,cRasterPadding=32895,
+  RLEforLW=32896,RLEforHC,RLEforBL,
+  Pixar10bitLZW=32908,PixarCompanded11bitZIP,
+  PKZIP_Deflate=32946,
+  Kodak_DCS=32947,
+  JBIG=34661,
+  SGI32LogLum=34676,
+  SIG24LogLum=34677,
+  JPEG_2000=34712
+} COMP;
+
+//enum for PhotometricInterpretation
+typedef enum <uint16> ePHOTO {
+  WhiteIsZero,BlackIsZero,RGB,RGB_Palette,Transparency_Mask,CMYK,YCbCr,
+  CIELab=8,ICCLab,ITULab,CFA=32803,CIELog2L=32844,CIELog2Luv,LinearRaw=34892
+} PHOTO;
+
+//enum for ResolutionUnit
+typedef enum <uint16> eRES {
+  None=1,Inch,Centimeter
+} RES;
+
+// TIFF Data Types
+
+// Rational (e.g. fraction: NUMERATOR/DENOMINATOR)
+
+typedef struct {
+  uint32 num;                 // Numerator
+  uint32 dom;                 // Denominator 
+} RATIONAL <read=readRATIONAL,write=writeRATIONAL>;
+
+string readRATIONAL(local RATIONAL &r) {
+  local string s;
+  SPrintf(s,"%d/%d",r.num,r.dom);
+  return s;
+}
+
+void writeRATIONAL(local RATIONAL &r, local string s) {
+  SScanf(s,"%d/%d",r.num,r.dom);
+}
+
+// Signed Rational (e.g. fraction: NUMERATOR/DENOMINATOR)
+
+typedef struct {
+  int32 num;                  // Numerator
+  int32 dom;                  // Denominator 
+} SRATIONAL <read=readSRATIONAL,write=writeSRATIONAL>;
+
+string readSRATIONAL(local SRATIONAL &r) {
+  local string s;
+  SPrintf(s,"%d/%d",r.num,r.dom);
+  return s;
+}
+
+void writeSRATIONAL(local SRATIONAL &r, local string s) {
+  SScanf(s,"%d/%d",r.num,r.dom);
+}
+
+
+// ENT: Directory Entry
+//   An Entry holds one tag and tag data (or a pointer to the data)
+//   Entries are contained in IFDs (Image File Directories)
+typedef struct {
+  TAG     tag;
+  TAGTYPE typ;
+  uint32  count;
+  if (typ==eBYTE) {
+    if (count<4) {
+      ubyte data[count];
+      ubyte padding[4-count];
+    } else if (count==4) {             // NO padding in this case
+      ubyte data[count];
+    } else {
+      uint32  offset <format=hex>;
+      local quad curpos = FTell();
+      FSeek(offset);
+      ubyte value[count];
+      FSeek(curpos);
+    }
+  } else if (typ==eASCII) {
+    if (count<4) {
+      char data[count];
+      char padding[4-count];
+    } else if (count==4) {
+      char data[count];
+    } else {
+      uint32  offset <format=hex>;
+      local quad curpos = FTell();
+      FSeek(offset);
+      char data[count];
+      FSeek(curpos);
+    }
+  } else if (typ==eSHORT) {
+    if (count==1) {
+      if (tag==Compression) {
+        COMP value;
+      } else if (tag==PhotometricInterpretation) {
+        PHOTO value;
+      } else if (tag==ResolutionUnit) {
+        RES value;
+      } else {
+        uint16 value;
+      }
+      uint16 padding;
+    } else if (count==2) {
+      uint16 value[2];
+    } else {
+      uint32  offset <format=hex>;
+      local quad curpos = FTell();
+      FSeek(offset);
+      uint16 value[count];
+      FSeek(curpos);
+    }
+  } else if (typ==eLONG) {
+    if (count==1) {
+      uint32 value;
+    } else {
+      uint32  offset <format=hex>;
+      local quad curpos = FTell();
+      FSeek(offset);
+      uint32 value[count];
+      FSeek(curpos);
+    }
+  } else if (typ==eRATIONAL) {
+    uint32  offset <format=hex>;
+    local quad curpos = FTell();
+    FSeek(offset);
+    if (count==1) {
+      RATIONAL value;
+    } else {
+      RATIONAL value[count];
+    }
+    FSeek(curpos);
+  } else if (typ==eSBYTE) {
+    if (count<4) {
+      byte data[count];
+      ubyte padding[4-count];
+    } else if (count==4) {             // NO padding in this case
+      byte data[count];
+    } else {
+      uint32  offset <format=hex>;
+      local quad curpos = FTell();
+      FSeek(offset);
+      byte value[count];
+      FSeek(curpos);
+    }
+  } else if (typ==eUNDEF) {
+    if (count<4) {
+      ubyte data[count];
+      ubyte padding[4-count];
+    } else if (count==4) {             // NO padding in this case
+      ubyte data[count];
+    } else {
+      uint32  offset <format=hex>;
+      local quad curpos = FTell();
+      FSeek(offset);
+      ubyte value[count];
+      FSeek(curpos);
+    }
+  } else if (typ==eSSHORT) {
+    if (count==1) {
+      int16 value;
+      int16 padding;
+    } else if (count==2) {
+      int16 value[2];
+    } else {
+      uint32  offset <format=hex>;
+      local quad curpos = FTell();
+      FSeek(offset);
+      int16 value[count];
+      FSeek(curpos);
+    }
+  } else if (typ==eSLONG) {
+    if (count==1) {
+      int32 value;
+    } else {
+      uint32  offset <format=hex>;
+      local quad curpos = FTell();
+      FSeek(offset);
+      int32 value[count];
+      FSeek(curpos);
+    }
+  } else if (typ==eSRATIONAL) {
+    uint32  offset <format=hex>;
+    local quad curpos = FTell();
+    FSeek(offset);
+    if (count==1) {
+      SRATIONAL value;
+    } else {
+      SRATIONAL value[count];
+    }
+    FSeek(curpos);
+  } else if (typ==eFLOAT) {
+    if (count==1) {
+      float value;
+    } else {
+      uint32  offset <format=hex>;
+      local quad curpos = FTell();
+      FSeek(offset);
+      float value[count];
+      FSeek(curpos);
+    }
+  } else if (typ==eDOUBLE) {
+    uint32  offset <format=hex>;
+    local quad curpos = FTell();
+    FSeek(offset);
+    if (count==1) {
+      double value;
+    } else {
+      double value[count];
+    }
+    FSeek(curpos);
+  } else {
+    //UNKNOWN data type, so we can't tell if this is a value or
+    //an offset.  Nor do we know the size of the data, so we can't
+    //know how big it is.  (Might be a newer TIFF spec)
+    uint32  valOffset <format=hex>;
+  }
+} ENT;
+
+// IFD: Image File Directory
+typedef struct {
+  uint16  numentries;
+  ENT     dir[numentries] <optimize=false>;
+  uint32  offset <format=hex>;
+  nextIFD = (quad)offset;              // This is how we find the next one
+} IFD;
+
+// IFH: Image File Header
+typedef struct {
+  char   bom[2];
+  uint16 magic;                        // Should always be 42
+  if (magic!=42) {
+    Warning("Invalid TIFF File: Bad Magic number");
+    return -1;
+  }
+  uint32 offset <format=hex>;          // Offset to first IFD
+
+  // Sanity check: There must be an initial IFD
+  if (offset == 0) {
+    Warning("Invalid TIFF File: No initial IFD");
+    return -1;
+  }
+
+  nextIFD = (quad)offset;              // This is how we find it later
+} IFH;
+
+// ---------------------------------------------------------------------------
+// MAIN  --  Here's where we really allocate the data
+// ---------------------------------------------------------------------------
+
+IFH ifh;                // Allocate the Header (and set nextIFD)
+while(nextIFD) {        // while there is another IFD, ...
+  FSeek(nextIFD);       //   Go to it
+  IFD ifd;              //   Allocate it (and set nextIFD)
+}
