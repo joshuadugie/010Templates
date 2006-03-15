@@ -1,9 +1,11 @@
 //-----------------------------------
-//--- 010 Editor v1.1 Binary Template
+//--- 010 Editor v2.0 Binary Template
 //
-// Name:    BMPTemplate.bt
-// Purpose: Defines a template for
-//    parsing BMP files.
+// File:     BMPTemplate.bt
+// Author:   SweetScape Software
+// Revision: 2.0
+// Purpose:  Defines a template for
+//    parsing BMP image files.
 //-----------------------------------
 
 // Define structures used in BMP files
@@ -35,13 +37,31 @@ typedef struct {   // rgbq
     UBYTE   rgbGreen;
     UBYTE   rgbRed;
     UBYTE   rgbReserved;
-} RGBQUAD;
+} RGBQUAD <read=ReadRGBQUAD>;
 
 typedef struct {   // rgbt
     UBYTE   rgbBlue;
     UBYTE   rgbGreen;
     UBYTE   rgbRed;
-} RGBTRIPLE;
+} RGBTRIPLE <read=ReadRGBTRIPLE>;
+
+//---------------------------------------------
+// Custom read functions for color types - this allows the
+//  color to be displayed without having to open up the structure.
+
+string ReadRGBQUAD( RGBQUAD &a )
+{
+    string s;
+    SPrintf( s, "#%02X%02X%02X%02X", a.rgbReserved, a.rgbBlue, a.rgbGreen, a.rgbRed );
+    return s;
+}
+
+string ReadRGBTRIPLE( RGBTRIPLE &a )
+{
+    string s;
+    SPrintf( s, "#%02X%02X%02X", a.rgbBlue, a.rgbGreen, a.rgbRed );
+    return s;
+}
 
 //---------------------------------------------
 
@@ -59,7 +79,7 @@ if( bmfh.bfType != "BM" )
 }
 
 // Define the color table
-if( bmih.biBitCount != 24 )
+if( (bmih.biBitCount != 24) && (bmih.biBitCount != 32) )
 {
     SetBackColor( cLtAqua );
     if( bmih.biClrUsed > 0 )
@@ -96,10 +116,12 @@ else
              UBYTE     colorIndex[ bmih.biWidth ];
         else if( bmih.biBitCount == 24 )
              RGBTRIPLE colors[ bmih.biWidth ];
+        else if( bmih.biBitCount == 32 )
+             RGBQUAD   colors[ bmih.biWidth ];
 
         // Pad if necessary        
         if( padding != 0 )
              UBYTE padBytes[ padding ];
 
-    } lines[ bmih.biHeight ];
+    } lines[ bmih.biHeight ] <optimize=true>;
 } 
