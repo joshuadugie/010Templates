@@ -1,8 +1,10 @@
 //-----------------------------------
-//--- 010 Editor v1.1 Binary Template
+//--- 010 Editor v2.0 Binary Template
 //
-// Name:    ZIPTemplate.bt
-// Purpose: Defines a template for
+// File:     ZIPTemplate.bt
+// Author:   SweetScape Software
+// Revision: 2.0
+// Purpose:  Defines a template for
 //    parsing ZIP files.
 //-----------------------------------
 
@@ -25,16 +27,13 @@ typedef enum <short> {
 // Defines a file record
 typedef struct {
     // Header for the file
-    SetBackColor( cLtGray );
-    uchar    frSignature[4];    //0x04034b50
+    char     frSignature[4];    //0x04034b50
     ushort   frVersion;
     ushort   frFlags;
     COMPTYPE frCompression;
     DOSTIME  frFileTime;
     DOSDATE  frFileDate;
-    DisplayFormatHex();
-    uint     frCrc;
-    DisplayFormatDecimal();
+    uint     frCrc     <format=hex>;
     uint     frCompressedSize;
     uint     frUncompressedSize;
     ushort   frFileNameLength;
@@ -58,21 +57,18 @@ typedef struct {
         uint     frUncompressedSize2;
     }
 
-} ZIPFILERECORD;
+} ZIPFILERECORD <read=ReadZIPFILERECORD>;
 
 // Defines an entry in the directory table
 typedef struct {
-    SetBackColor( cLtPurple );
-    uchar    deSignature[4];     //0x02014b50
+    char     deSignature[4];     //0x02014b50
     ushort   deVersionMadeBy;
     ushort   deVersionToExtract;
     ushort   deFlags;
     COMPTYPE deCompression;
     DOSTIME  deFileTime;
     DOSDATE  deFileDate;
-    DisplayFormatHex();
-    uint     deCrc;
-    DisplayFormatDecimal();
+    uint     deCrc     <format=hex>;
     uint     deCompressedSize;
     uint     deUncompressedSize;
     ushort   deFileNameLength;
@@ -88,11 +84,11 @@ typedef struct {
         uchar    deExtraField[ deExtraFieldLength ];
     if( deFileCommentLength > 0 )
         uchar    deFileCommand[ deExtraFieldLength ];
-} ZIPDIRENTRY;
+} ZIPDIRENTRY <read=ReadZIPDIRENTRY>;
 
 // Defines the digital signature
 typedef struct {
-    uchar    dsSignature[4];    //0x05054b50
+    char     dsSignature[4];    //0x05054b50
     ushort   dsDataLength;
     if( dsDataLength > 0 )
         uchar    dsData[ dsDataLength ];
@@ -100,7 +96,7 @@ typedef struct {
         
 // Defines the end of central directory locator
 typedef struct {
-    uchar    elSignature[4];    //0x06054b50
+    char     elSignature[4];    //0x06054b50
     ushort   elDiskNumber;
     ushort   elStartDiskNumber;
     ushort   elEntriesOnDisk;
@@ -111,6 +107,27 @@ typedef struct {
     if( elCommentLength > 0 )
         char    elComment[ elCommentLength ];
 } ZIPENDLOCATOR;
+
+//--------------------------------------------
+
+// Custom read functions that allows the name of the
+//  of the file to appear in the Template Results.
+
+string ReadZIPFILERECORD( ZIPFILERECORD &file )
+{
+    if( exists( file.frFileName ) )
+        return file.frFileName;
+    else
+        return "";
+}
+
+string ReadZIPDIRENTRY( ZIPDIRENTRY &entry )
+{
+    if( exists( entry.deFileName ) )
+        return entry.deFileName;
+    else
+        return "";
+}
 
 //--------------------------------------------
 
@@ -127,13 +144,25 @@ while( !FEof() )
     // are made into an array (see 'Using Templates and Structs'
     // in the help file).
     if( tag == 0x04034b50 )
-        ZIPFILERECORD   file;
+    {
+        SetBackColor( cLtGray );
+        ZIPFILERECORD file;
+    }
     else if( tag == 0x02014b50 )
-        ZIPDIRENTRY     dirEntry;
+    {
+        SetBackColor( cLtPurple );
+        ZIPDIRENTRY   dirEntry;
+    }
     else if( tag == 0x05054b50 )
-        ZIPDIGITALSIG   digitalSig;
+    {
+        SetBackColor( cLtBlue );
+        ZIPDIGITALSIG digitalSig;
+    }
     else if( tag == 0x06054b50 )
-        ZIPENDLOCATOR   endLocator;
+    {
+        SetBackColor( cLtYellow );
+        ZIPENDLOCATOR endLocator;
+    }
     else
     {
         Warning( "Unknown ZIP tag encountered. Template stopped." );
