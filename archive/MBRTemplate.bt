@@ -1,0 +1,32 @@
+//------------------------------------
+//--- 010 Editor v2.01 Binary Template
+//
+// Name: MBRTemplate.bt
+// Author: Christian Schaffalitzky
+// Purpose: Parse a Master Boot Record on a Harddisk
+//------------------------------------
+
+typedef struct fdisk_partition {
+  unsigned char bootid;   /* bootable?  0=no, 128=yes  */
+  unsigned char beghead;  /* beginning head number */
+  unsigned char begsect;  /* beginning sector number */
+  unsigned char begcyl;   /* 10 bit nmbr, with high 2 bits put in begsect */	
+  unsigned char systid;   /* Operating System type indicator code */
+  unsigned char endhead;  /* ending head number */
+  unsigned char endsect;  /* ending sector number */
+  unsigned char endcyl;   /* also a 10 bit nmbr, with same high 2 bit trick */
+  int relsect;            /* first sector relative to start of disk */
+  int numsect;            /* number of sectors in partition */
+};
+
+
+typedef struct master_boot_record {
+  char    bootinst[446];   /* space to hold actual boot code */
+  fdisk_partition partitions[4];
+  ushort  signature;       /* set to 0xAA55 to indicate PC MBR format */
+};
+
+LittleEndian();
+
+FSeek(0);
+master_boot_record MBR;
