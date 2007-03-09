@@ -1,15 +1,18 @@
 //--------------------------------------
-//--- 010 Editor v2.0.1 Binary Template
+//--- 010 Editor v2.1 Binary Template
+//
+// $Id: TIFTemplate.bt 61 2007-03-06 16:53:31Z kogrover $
 //
 //    File: TIFTemplate.bt
-//  Author: Kevin O. Grover <kogrover@yahoo.com>
+//  Author: Kevin O. Grover <kevin@kevingrover.net>
 // Purpose: A template for parsing TIFF (Tagged Image File Format) files.
-// Version: $Revision: 1.7 $
+// Version: $Revision: 61 $
 // History:
 // 2005-05-09  KOG  Initial version
 // 2005-05-11  KOG  *Many* more TIFF Tag IDs (generated with a Perl script)
 // 2005-05-19  KOG  Added new iFax tags and best guess for MS Fax Tags
 // 2005-06-30  KOG  Updated MSFax Tag list
+// 2007-02-28  KOG  Updated for 010 2.1 (uses EnumToString)
 //
 // This template was written to the TIFF6 specification.  You can get the TIFF 
 // documentation from Adobe (http://www.adobe.com) after registering, or
@@ -335,7 +338,19 @@ typedef struct {
     //know how big it is.  (Might be a newer TIFF spec)
     uint32  valOffset <format=hex>;
   }
-} ENT;
+} ENT <read=readENT>;
+
+/**
+ * Reader for ENT Types
+ * Shows the tag string, number, and type (as a string)
+ * @param ent   Pointer to the structure
+ */   
+string readENT(local ENT &ent) {
+  local string s;
+  // NOTE: This only works with 010 v2.1 or greater...
+  SPrintf(s,"%s (%d): %s",EnumToString(ent.tag), ent.tag, EnumToString(ent.typ));
+  return s;
+}
 
 // IFD: Image File Directory
 typedef struct {
@@ -343,7 +358,19 @@ typedef struct {
   ENT     dir[numentries] <optimize=false>;
   uint32  offset <format=hex>;
   nextIFD = (quad)offset;              // This is how we find the next one
-} IFD;
+} IFD <read=readIFD>;
+
+/**
+ * Reader for IFD Types
+ * Shows the Number of entries and the type of the first directory tag
+ * @param ifd   Pointer to the structure
+ */   
+string readIFD(local IFD &ifd) {
+  local string s;
+  // NOTE: This only works with 010 v2.1 or greater...
+  SPrintf(s,"%d: %s", ifd.numentries, (ifd.numentries>0) ? EnumToString(ifd.dir[0].tag) : "");
+  return s;
+}
 
 // IFH: Image File Header
 typedef struct {
