@@ -3,9 +3,14 @@
 //
 // File:	 BMGIFTemplate.bt
 // Author:   Berend-Jan "SkyLined" Wever
-// Revision: 1.0
+// Revision: 1.1
 // Purpose:  Defines a template for
 //	parsing GIF image files.
+// SweetScape: Added bug fixes for
+//      reading global color table (May 2nd, 2007)
+// SweetScape: Added bug fixes for
+//      reading local color table and
+//      changed ReadShort to ReadUShort (Sept 25, 2007)
 //-----------------------------------
 
 // From GIF89a Specification:
@@ -51,6 +56,7 @@ typedef struct {
 typedef struct {
 	ushort	Width;
 	ushort	Height;
+        BitfieldLeftToRight();
 	struct	LOGICALSCREENDESCRIPTOR_PACKEDFIELDS {
 		UBYTE	GlobalColorTableFlag : 1;
 		UBYTE	ColorResolution : 3;
@@ -80,7 +86,7 @@ if (LogicalScreenDescriptor.PackedFields.GlobalColorTableFlag == 1) {
 	struct GLOBALCOLORTABLE {
 		local int i;
 		local int size = 1;
-		for (i = 0; i < LogicalScreenDescriptor.PackedFields.SizeOfGlobalColorTable; i++) {
+		for (i = 0; i <= LogicalScreenDescriptor.PackedFields.SizeOfGlobalColorTable; i++) {
 			size *= 2;
 		}
 		RGB rgb[size];
@@ -112,7 +118,7 @@ struct DATA {
 				struct LOCALCOLORTABLE {
 					local int i;
 					local int size = 1;
-					for (i = 0; i < ImageDescriptor.PackedFields.SizeOfLocalColorTable; i++) {
+					for (i = 0; i <= ImageDescriptor.PackedFields.SizeOfLocalColorTable; i++) {
 						size *= 2;
 					}
 					RGB rgb[size];
@@ -123,7 +129,7 @@ struct DATA {
 				UBYTE	LZWMinimumCodeSize;
 				DATASUBBLOCKS DataSubBlocks;
 			} ImageData;
-		} else if (ReadShort(FTell()) == 0xF921) {
+		} else if (ReadUShort(FTell()) == 0xF921) {
 			SetBackColor( 0xC0FFFF );
 			struct GRAPHICCONTROLEXTENSION {
 				UBYTE ExtensionIntroducer; // 0x21
@@ -141,14 +147,14 @@ struct DATA {
 				} GraphicControlSubBlock;
 				UBYTE	BlockTerminator;
 			} GraphicControlExtension;
-		} else if (ReadShort(FTell()) == 0xFE21) {
+		} else if (ReadUShort(FTell()) == 0xFE21) {
 			SetBackColor( 0xFFFFC0 );
 			struct COMMENTEXTENSION {
 				UBYTE ExtensionIntroducer; // 0x21
 				UBYTE CommentLabel; // 0xFE
 				DATASUBBLOCKS CommentData;
 			} CommentExtension;
-		} else if (ReadShort(FTell()) == 0x0121) {
+		} else if (ReadUShort(FTell()) == 0x0121) {
 			SetBackColor( 0xC0C0C0 );
 			struct PLAINTEXTEXTENTION {
 				UBYTE ExtensionIntroducer; // 0x21
@@ -166,7 +172,7 @@ struct DATA {
 				} PlainTextSubBlock;
 				DATASUBBLOCKS PlainTextData;
 			} PlainTextExtension;
-		} else if (ReadShort(FTell()) == 0xFF21) {
+		} else if (ReadUShort(FTell()) == 0xFF21) {
 			SetBackColor( 0xC0C0FF );
 			struct APPLICATIONEXTENTION {
 				UBYTE ExtensionIntroducer; // 0x21
