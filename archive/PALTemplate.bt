@@ -1,11 +1,14 @@
 //--------------------------------------
-//--- 010 Editor v2.0.2 Script File
+//--- 010 Editor v2.0.2 Template File
 //
 // File:     PALTemplate.bt
 // Author:   SweetScape Software
-// Revision: 1.0
+// Revision: 1.1
 // Purpose:  Parses a Microsoft PAL
 //     palette file.
+// SweetScape: Changed display order
+//  in ReadRGBQUAD to match the BMP 
+//  template (Oct 24th, 2007).
 //--------------------------------------
 
 // Declare a structure for holding a color
@@ -22,7 +25,7 @@ typedef struct
 string ReadRGBQUAD( RGBQUAD &a )
 {
     string s;
-    SPrintf( s, "#%02X%02X%02X%02X", a.alpha, a.blue, a.green, a.red );
+    SPrintf( s, "#%02X%02X%02X%02X", a.alpha, a.red, a.green, a.blue );
     return s;
 }
 
