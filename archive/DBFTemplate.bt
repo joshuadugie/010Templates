@@ -46,7 +46,7 @@ struct DBF {
 		char	flags <format=hex>;
 		char	reserved2[7];
 		char	indexFieldFlag <format=decimal>;
-	} field[(header.lengthOfHeaderStructure-32)/sizeof(struct FIELD)];
+	} field[(header.lengthOfHeaderStructure-33)/sizeof(struct FIELD)];
 	char	Terminator <format=hex>;
 	struct RECORD {
 		char	deletedFlag;
