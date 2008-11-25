@@ -3,9 +3,15 @@
 //
 // File:     ZIPTemplate.bt
 // Author:   SweetScape Software
-// Revision: 2.0
+// Revision: 2.2
 // Purpose:  Defines a template for
 //    parsing ZIP files.
+// Changes:  
+// 2.1 (SweetScape): 
+//   - Added write function for ZIPFILERECORD structure.
+// 2.2 (S.Gibson, KPMG LLP): 
+//   - Fix for entry comment field
+//   - Fix for parsing data descriptors
 //-----------------------------------
 
 // Define structures used in ZIP files
@@ -48,16 +54,7 @@ typedef struct {
     if( frCompressedSize > 0 )
         uchar    frData[ frCompressedSize ];
 
-    // Data descriptor
-    if( frFlags & 0x04 )
-    {
-        SetBackColor( cLtAqua );
-        uint     frCrc2;
-        uint     frCompressedSize2;
-        uint     frUncompressedSize2;
-    }
-
-} ZIPFILERECORD <read=ReadZIPFILERECORD>;
+} ZIPFILERECORD <read=ReadZIPFILERECORD, write=WriteZIPFILERECORD>;
 
 // Defines an entry in the directory table
 typedef struct {
@@ -83,7 +80,7 @@ typedef struct {
     if( deExtraFieldLength > 0 )
         uchar    deExtraField[ deExtraFieldLength ];
     if( deFileCommentLength > 0 )
-        uchar    deFileCommand[ deExtraFieldLength ];
+        uchar    deFileComment[ deFileCommentLength ];
 } ZIPDIRENTRY <read=ReadZIPDIRENTRY>;
 
 // Defines the digital signature
@@ -94,6 +91,14 @@ typedef struct {
         uchar    dsData[ dsDataLength ];
 } ZIPDIGITALSIG;
         
+// Defintes the Data descriptor
+typedef struct {
+    char ddSignature[4]; //0x08074b50
+    uint ddCRC <format=hex>;
+    uint ddCompressedSize;
+    uint ddUncompressedSize;
+} ZIPDATADESCR;
+
 // Defines the end of central directory locator
 typedef struct {
     char     elSignature[4];    //0x06054b50
@@ -129,6 +134,21 @@ string ReadZIPDIRENTRY( ZIPDIRENTRY &entry )
         return "";
 }
 
+// Custom write function that allows changing
+//  the name of the file - note that the file
+//  name size cannot be increased
+
+void WriteZIPFILERECORD( ZIPFILERECORD &file, string s )
+{
+    local int len = Strlen( s );
+    if( exists( file.frFileName ) )
+    {
+        Strncpy( file.frFileName, s, file.frFileNameLength );
+        if( len < file.frFileNameLength )
+            file.frFileName[len] = 0; //null terminate        
+    }
+}
+
 //--------------------------------------------
 
 // Define the file
@@ -146,12 +166,17 @@ while( !FEof() )
     if( tag == 0x04034b50 )
     {
         SetBackColor( cLtGray );
-        ZIPFILERECORD file;
+        ZIPFILERECORD record;
+    }
+    else if( tag == 0x08074b50 )
+    {
+        SetBackColor( cLtGreen );
+        ZIPDATADESCR dataDescr;
     }
     else if( tag == 0x02014b50 )
     {
         SetBackColor( cLtPurple );
-        ZIPDIRENTRY   dirEntry;
+        ZIPDIRENTRY dirEntry;
     }
     else if( tag == 0x05054b50 )
     {
