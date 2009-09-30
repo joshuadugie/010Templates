@@ -3,8 +3,10 @@
 //
 // File: PNG12Template.bt
 // Author: RCS
-// Revision: 0.1
+// Revision: 0.3
 // Purpose: Use templates on PNG images
+// Changes: 0.2 - Allow duplicate chunks
+//          0.3 - Made chunk names case sensitive
 //--------------------------------------
 
 typedef struct {
@@ -111,7 +113,7 @@ struct PngFile {
   // Safe-to-copy bit: bit 5 of fourth byte
   SetForeColor(cGreen);
   PNG_CHUNK_HEADER ihdrChunkHdr;
-  if (Strnicmp(ihdrChunkHdr.btChunkType, "IHDR", 4) != 0) 
+  if (Strncmp(ihdrChunkHdr.btChunkType, "IHDR", 4) != 0) 
   {
     Warning( "PNG File does not start with IHDR chunk." );
     return -2;
@@ -132,219 +134,270 @@ struct PngFile {
     // Safe-to-copy bit: bit 5 of fourth byte
     SetForeColor(cGreen);
     PNG_CHUNK_HEADER chunkHdr;
-    if (Strnicmp(chunkHdr.btChunkType, "PLTE", 4) == 0) 
+    if (Strncmp(chunkHdr.btChunkType, "PLTE", 4) == 0) 
     {
       SetForeColor(cBlack);
-      PNG_PALETTE_PIXEL plteChunkData[chunkHdr.btChunkLen/3];
-
-      SetForeColor(cBlue);
-      DWORD plteCrc <format=hex>;
+      struct PNG_CHUNK_PLTE
+      {
+          PNG_PALETTE_PIXEL plteChunkData[chunkHdr.btChunkLen/3];
+    
+          SetForeColor(cBlue);
+          DWORD plteCrc <format=hex>;
+      } chunk_plte;
     }
-    else if (Strnicmp(chunkHdr.btChunkType, "tRNS", 4) == 0) 
+    else if (Strncmp(chunkHdr.btChunkType, "tRNS", 4) == 0) 
     {
       SetForeColor(cBlack);
-      BYTE trnsChunkData[chunkHdr.btChunkLen] <format=hex>;
-
-      SetForeColor(cBlue);
-      DWORD trnsCrc <format=hex>;
+      struct PNG_CHUNK_TRNS
+      {
+          BYTE trnsChunkData[chunkHdr.btChunkLen] <format=hex>;
+    
+          SetForeColor(cBlue);
+          DWORD trnsCrc <format=hex>;
+      } chunk_trns;
     }
-    else if (Strnicmp(chunkHdr.btChunkType, "IDAT", 4) == 0) 
+    else if (Strncmp(chunkHdr.btChunkType, "IDAT", 4) == 0) 
     {
       SetForeColor(cWhite);
       SetBackColor(cBlack);
-      BYTE idatChunkData[chunkHdr.btChunkLen] <format=hex>;
-      SetForeColor(cBlack);
-      SetBackColor(cWhite);
-
-      SetForeColor(cBlue);
-      DWORD idatCrc <format=hex>;
-    }
-    else if (Strnicmp(chunkHdr.btChunkType, "gAMA", 4) == 0) 
-    {
-      SetForeColor(cBlack);
-      BYTE gamaChunkData[chunkHdr.btChunkLen];
-
-      SetForeColor(cBlue);
-      DWORD gamaCrc <format=hex>;
-    }
-    else if (Strnicmp(chunkHdr.btChunkType, "cHRM", 4) == 0) 
-    {
-      SetForeColor(cBlack);
-      PNG_CHRM_CHUNK_DATA chrmChunkData;
-
-      SetForeColor(cBlue);
-      DWORD chrmCrc <format=hex>;
-    }
-    else if (Strnicmp(chunkHdr.btChunkType, "sRGB", 4) == 0) 
-    {
-      SetForeColor(cBlack);
-      PNG_SRGB_CHUNK_DATA srgbChunkData;
-
-      SetForeColor(cBlue);
-      DWORD srgbCrc <format=hex>;
-    }
-    else if (Strnicmp(chunkHdr.btChunkType, "iEXT", 4) == 0) 
-    {
-      SetForeColor(cBlack);
-      string iextIdChunkData;
-      byte iextCompressionFlag;
-      PNG_COMPR_METHOD iextComprMethod;
-      string iextLanguageTag;
-      string iextTranslatedKeyword;
-      char iextValChunkData[chunkHdr.btChunkLen - 
-                            Strlen(iextIdChunkData) -1 -
-                            Strlen(iextLanguageTag) -1 -
-                            Strlen(iextTranslatedKeyword) -1 -
-                            2];
-
-      SetForeColor(cBlue);
-      DWORD iextCrc <format=hex>;
-    }
-    else if (Strnicmp(chunkHdr.btChunkType, "tEXT", 4) == 0) 
-    {
-      SetForeColor(cBlack);
-      string textIdChunkData;
-      char textValChunkData[chunkHdr.btChunkLen - Strlen(textIdChunkData) -1];
-
-      SetForeColor(cBlue);
-      DWORD textCrc <format=hex>;
-    }
-    else if (Strnicmp(chunkHdr.btChunkType, "zEXT", 4) == 0) 
-    {
-      SetForeColor(cBlack);
-      string zextIdChunkData;
-      PNG_COMPR_METHOD comprMethod;
-      char zextValChunkData[chunkHdr.btChunkLen - Strlen(zextIdChunkData) -2];
-
-      SetForeColor(cBlue);
-      DWORD zextCrc <format=hex>;
-    }
-    else if (Strnicmp(chunkHdr.btChunkType, "tIME", 4) == 0) 
-    {
-      SetForeColor(cBlack);
-      short timeYear  <format=decimal>;
-      byte  timeMonth <format=decimal>;
-      byte  timeDay   <format=decimal>;
-      byte  timeHour  <format=decimal>;
-      byte  timeMin   <format=decimal>;
-      byte  timeSec   <format=decimal>;
-
-      SetForeColor(cBlue);
-      DWORD zextCrc <format=hex>;
-    }
-    else if (Strnicmp(chunkHdr.btChunkType, "bKGD", 4) == 0) 
-    {
-      SetForeColor(cBlack);
-      switch (ihdrChunkData.color_type)
+      struct PNG_CHUNK_IDAT
       {
-        case 3: // Indexed
-          unsigned byte bgColorPaletteIndex <format=hex>;
-          break;
-        
-        case 0: // Grayscale
-        case 4: // Grayscale with alpha
-          unsigned short bgGrayscalePixelValue <format=hex>;
-          break;
-        
-        case 2: // TrueColor
-        case 6: // TrueColor with alpha
-          unsigned short bgColorPixelRed <format=hex>;
-          unsigned short bgColorPixelGreen <format=hex>;
-          unsigned short bgColorPixelBlue <format=hex>;
-          break;
-        
-        default:
-          Warning( "Unknown Color Model Type for background color chunk." );
-          return -4;
-      }
-
-      SetForeColor(cBlue);
-      DWORD zextCrc <format=hex>;
+          BYTE idatChunkData[chunkHdr.btChunkLen] <format=hex>;
+          SetForeColor(cBlack);
+          SetBackColor(cWhite);
+    
+          SetForeColor(cBlue);
+          DWORD idatCrc <format=hex>;
+      } chunk_idat;
     }
-    else if (Strnicmp(chunkHdr.btChunkType, "pHYS", 4) == 0) 
+    else if (Strncmp(chunkHdr.btChunkType, "gAMA", 4) == 0) 
     {
       SetForeColor(cBlack);
-      uint physPixelPerUnitX;
-      uint physPixelPerUnitY;
-      enum <byte> {
-        UnkownUnit = 0,
-        Meter = 1
-      } physUnitSpec;
-
-      SetForeColor(cBlue);
-      DWORD zextCrc <format=hex>;
-    }
-    else if (Strnicmp(chunkHdr.btChunkType, "sBIT", 4) == 0) 
-    {
-      SetForeColor(cBlack);
-      switch (ihdrChunkData.color_type)
+      struct PNG_CHUNK_GAMA
       {
-        case 3: // Indexed
-          byte sbitRed;
-          byte sbitGreen;
-          byte sbitBlue;
-          break;
-        
-        case 0: // Grayscale
-          byte sbitGraySource;
-          break;
-
-        case 4: // Grayscale with alpha
-          byte sbitGrayAlphaSource;
-          byte sbitGrayAlphaSourceAlpha;
-          break;
-        
-        case 2: // TrueColor
-          byte sbitColorRed;
-          byte sbitColorGreen;
-          byte sbitColorBlue;
-          break;
-
-        case 6: // TrueColor with alpha
-          byte sbitColorAlphaRed;
-          byte sbitColorAlphaGreen;
-          byte sbitColorAlphaBlue;
-          byte sbitColorAlphaAlpha;
-          break;
-        
-        default:
-          Warning( "Unknown Color Model Type for background color chunk." );
-          return -4;
-      }
-
-      SetForeColor(cBlue);
-      DWORD sbitCrc <format=hex>;
+          BYTE gamaChunkData[chunkHdr.btChunkLen];
+    
+          SetForeColor(cBlue);
+          DWORD gamaCrc <format=hex>;
+      } chunk_gama;
     }
-    else if (Strnicmp(chunkHdr.btChunkType, "sPLT", 4) == 0) 
+    else if (Strncmp(chunkHdr.btChunkType, "cHRM", 4) == 0) 
+    {
+      SetForeColor(cBlack);
+      struct PNG_CHUNK_CHRM
+      {
+          PNG_CHRM_CHUNK_DATA chrmChunkData;
+    
+          SetForeColor(cBlue);
+          DWORD chrmCrc <format=hex>;
+      } chunk_chrm;
+    }
+    else if (Strncmp(chunkHdr.btChunkType, "sRGB", 4) == 0) 
+    {
+      SetForeColor(cBlack);
+      struct PNG_CHUNK_SRGB
+      {
+          PNG_SRGB_CHUNK_DATA srgbChunkData;
+    
+          SetForeColor(cBlue);
+          DWORD srgbCrc <format=hex>;
+      } chunk_srgb;
+    }
+    else if (Strncmp(chunkHdr.btChunkType, "iEXt", 4) == 0) 
+    {
+      SetForeColor(cBlack);
+      struct PNG_CHUNK_IEXT
+      {
+          string iextIdChunkData;
+          byte iextCompressionFlag;
+          PNG_COMPR_METHOD iextComprMethod;
+          string iextLanguageTag;
+          string iextTranslatedKeyword;
+          char iextValChunkData[chunkHdr.btChunkLen - 
+                                Strlen(iextIdChunkData) -1 -
+                                Strlen(iextLanguageTag) -1 -
+                                Strlen(iextTranslatedKeyword) -1 -
+                                2];
+    
+          SetForeColor(cBlue);
+          DWORD iextCrc <format=hex>;
+      } chunk_iext;
+    }
+    else if (Strncmp(chunkHdr.btChunkType, "tEXt", 4) == 0) 
+    {
+      SetForeColor(cBlack);
+      struct PNG_CHUNK_TEXT
+      {
+          string textIdChunkData;
+          char textValChunkData[chunkHdr.btChunkLen - Strlen(textIdChunkData) -1];
+    
+          SetForeColor(cBlue);
+          DWORD textCrc <format=hex>;
+      } chunk_text;
+    }
+    else if (Strncmp(chunkHdr.btChunkType, "zEXt", 4) == 0) 
+    {
+      SetForeColor(cBlack);
+      struct PNG_CHUNK_ZEXT
+      {
+          string zextIdChunkData;
+          PNG_COMPR_METHOD comprMethod;
+          char zextValChunkData[chunkHdr.btChunkLen - Strlen(zextIdChunkData) -2];
+    
+          SetForeColor(cBlue);
+          DWORD zextCrc <format=hex>;
+      } chunk_text;
+    }
+    else if (Strncmp(chunkHdr.btChunkType, "tIME", 4) == 0) 
+    {
+      SetForeColor(cBlack);
+      struct PNG_CHUNK_TIME
+      {
+          short timeYear  <format=decimal>;
+          byte  timeMonth <format=decimal>;
+          byte  timeDay   <format=decimal>;
+          byte  timeHour  <format=decimal>;
+          byte  timeMin   <format=decimal>;
+          byte  timeSec   <format=decimal>;
+    
+          SetForeColor(cBlue);
+          DWORD zextCrc <format=hex>;
+      } chunk_time;
+    }
+    else if (Strncmp(chunkHdr.btChunkType, "bKGD", 4) == 0) 
+    {
+      SetForeColor(cBlack);
+      struct PNG_CHUNK_BKGD
+      {
+          switch (ihdrChunkData.color_type)
+          {
+            case 3: // Indexed
+              unsigned byte bgColorPaletteIndex <format=hex>;
+              break;
+            
+            case 0: // Grayscale
+            case 4: // Grayscale with alpha
+              unsigned short bgGrayscalePixelValue <format=hex>;
+              break;
+            
+            case 2: // TrueColor
+            case 6: // TrueColor with alpha
+              unsigned short bgColorPixelRed <format=hex>;
+              unsigned short bgColorPixelGreen <format=hex>;
+              unsigned short bgColorPixelBlue <format=hex>;
+              break;
+            
+            default:
+              Warning( "Unknown Color Model Type for background color chunk." );
+              return -4;
+          }
+    
+          SetForeColor(cBlue);
+          DWORD zextCrc <format=hex>;
+      } chunk_bkgd;
+    }
+    else if (Strncmp(chunkHdr.btChunkType, "pHYs", 4) == 0) 
+    {
+      SetForeColor(cBlack);
+      struct PNG_CHUNK_PHYS
+      {
+          uint physPixelPerUnitX;
+          uint physPixelPerUnitY;
+          enum <byte> {
+            UnkownUnit = 0,
+            Meter = 1
+          } physUnitSpec;
+    
+          SetForeColor(cBlue);
+          DWORD zextCrc <format=hex>;
+      } chunk_phys;
+    }
+    else if (Strncmp(chunkHdr.btChunkType, "sBIT", 4) == 0) 
+    {
+      SetForeColor(cBlack);
+      struct PNG_CHUNK_SBIT
+      {
+          switch (ihdrChunkData.color_type)
+          {
+            case 3: // Indexed
+              byte sbitRed;
+              byte sbitGreen;
+              byte sbitBlue;
+              break;
+            
+            case 0: // Grayscale
+              byte sbitGraySource;
+              break;
+    
+            case 4: // Grayscale with alpha
+              byte sbitGrayAlphaSource;
+              byte sbitGrayAlphaSourceAlpha;
+              break;
+            
+            case 2: // TrueColor
+              byte sbitColorRed;
+              byte sbitColorGreen;
+              byte sbitColorBlue;
+              break;
+    
+            case 6: // TrueColor with alpha
+              byte sbitColorAlphaRed;
+              byte sbitColorAlphaGreen;
+              byte sbitColorAlphaBlue;
+              byte sbitColorAlphaAlpha;
+              break;
+            
+            default:
+              Warning( "Unknown Color Model Type for background color chunk." );
+              return -4;
+          }
+    
+          SetForeColor(cBlue);
+          DWORD sbitCrc <format=hex>;
+      } chunk_sbit;
+    }
+    else if (Strncmp(chunkHdr.btChunkType, "sPLT", 4) == 0) 
     {
       SetForeColor(cBlue);
-      string paletteName;
-      byte sampleDepth;
-      byte spltData[chunkHdr.btChunkLen - Strlen(paletteName) -2];
-
-      SetForeColor(cBlue);
-      DWORD spltCrc <format=hex>;
+      struct PNG_CHUNK_SPLT
+      {
+          string paletteName;
+          byte sampleDepth;
+          byte spltData[chunkHdr.btChunkLen - Strlen(paletteName) -2];
+    
+          SetForeColor(cBlue);
+          DWORD spltCrc <format=hex>;
+      } chunk_splt;
     }
-    else if (Strnicmp(chunkHdr.btChunkType, "hIST", 4) == 0) 
+    else if (Strncmp(chunkHdr.btChunkType, "hIST", 4) == 0) 
     {
       SetForeColor(cBlue);
-      DWORD iendCrc <format=hex>;
-
-      SetForeColor(cBlue);
-      DWORD histCrc <format=hex>;
+      struct PNG_CHUNK_HIST
+      {
+          DWORD iendCrc <format=hex>;
+    
+          SetForeColor(cBlue);
+          DWORD histCrc <format=hex>;
+      } chunk_hist;
     }
-    else if (Strnicmp(chunkHdr.btChunkType, "IEND", 4) == 0) 
+    else if (Strncmp(chunkHdr.btChunkType, "IEND", 4) == 0) 
     {
       SetForeColor(cBlue);
-      DWORD iendCrc <format=hex>;
+      struct PNG_CHUNK_IEND
+      {
+          DWORD iendCrc <format=hex>;
+      } chunk_iend;
     }
     else
     {
       SetForeColor(cBlack);
-      BYTE genChunkData[chunkHdr.btChunkLen];
-
-      SetForeColor(cBlue);
-      DWORD genCrc <format=hex>;
+      struct PNG_CHUNK_UNKNOWN
+      {
+          BYTE genChunkData[chunkHdr.btChunkLen];
+    
+          SetForeColor(cBlue);
+          DWORD genCrc <format=hex>;
+      } chunk_unknown;
     }
   }
   
