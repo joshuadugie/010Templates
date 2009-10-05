@@ -1,0 +1,118 @@
+//--------------------------------------
+//--- 010 Editor v3.0.5 Binary Template
+//
+// File:
+// Author:
+// Revision:
+// Purpose:
+//--------------------------------------
+
+typedef ushort wchar_t;
+local int i;
+
+char tag[4];
+int  version;
+int  count;
+
+struct RBookmark 
+{
+    int     fileNameLen;
+    wchar_t fileName[fileNameLen];
+    int64   offset;
+} bookmark[count] <optimize=false>;
+
+struct RVariant
+{
+    int type;
+    int size;
+    if( type > 100 )
+    {
+        Printf( "No supported\n" );
+        Exit(-1);
+    }   
+    else
+    {
+        int64 data;
+    }
+};
+
+/*for( i = 0; i < count; i++ )
+{
+    Printf( "%d\n", i );
+    RBookmark bookmark;
+}*/
+
+
+struct RBookmarkData 
+{
+    if( version > 1 )
+    {
+        int numTypes;
+        struct RType 
+        {
+            int     nameLen;
+            wchar_t name[nameLen];
+            if( version < 4 )
+                uint flagsAndIndex;
+            else
+            {
+                uint   flags;
+                ushort index;
+            }
+            int   arraySize;
+            short readfunc;
+            short writefunc;
+            int64 sizeOf;
+            
+            while( ReadShort( FTell() ) != 0 )
+            {
+                struct REnum
+                {
+                    short    tag;
+                    int      enumNameLen;
+                    wchar_t  enumName[enumNameLen];
+                    int      typeIndex;
+                    RVariant variant;
+                } enumData;
+
+            }
+            ushort endTag;
+
+        } types[numTypes] <optimize=false>;
+
+        int numVariables;
+        struct RVariable
+        {
+            int     nameLen;
+            wchar_t name[nameLen];
+            int64   start;
+            int64   size;
+            int64   arraySize;
+            int     dupIndex;
+            if( version < 4 )
+            {
+                int    flagsAndIndex;
+            }
+            else
+            {
+                uint   flags;
+                ushort typeIndex;
+            }
+            uint    foreColor;
+            uint    backColor;
+            int     numChildren;
+            struct RVariable children[numChildren] <optimize=false>;
+
+        } variables[numVariables] <optimize=false>;
+                
+    }
+};
+
+for( i = 0; i < count; i++ )
+{
+    if( bookmark[i].offset != -1 )
+    {
+        FSeek( bookmark[i].offset );
+        RBookmarkData data;      
+    }
+}
