@@ -6,6 +6,8 @@
 // Purpose:   to display executable file headers.
 //            Supports DLLs, Windows CE and Win64 executables.
 //            Displays informative names for all flags and fields.
+// Update:    Didier Stevens https://DidierStevens.com
+//            2010/09/05: Added DYNAMIC_BASE, FORCE_INTEGRITY, NX_COMPAT and NO_ISOLATION to DLLCHARACTERISTICS struct
 //--------------------------------------
 // Recommended reading:
 // 1. Bernd Luevelsmeyer. The PE file format
@@ -125,7 +127,11 @@ typedef struct {
    ushort NOTIFY_DLL_PROCESS_TERM: 1; // Not valid in modern OSes
    ushort NOTIFY_DLL_THREAD_TERM: 1; // Not valid in modern OSes
    ushort NOTIFY_DLL_THREAD_TERM: 1; // Not valid in modern OSes
-   ushort Reserved:6;
+   ushort Reserved:2;
+   ushort DYNAMIC_BASE:1;
+   ushort FORCE_INTEGRITY:1;
+   ushort NX_COMPAT:1;
+   ushort NO_ISOLATION:1;
    ushort NO_SEH:1;
    ushort NO_BIND:1;
    ushort Reserved2: 1;
