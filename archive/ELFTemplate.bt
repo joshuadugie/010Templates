@@ -3,17 +3,19 @@
 //
 // File:     ELFTemplate.bt
 // Author:   
-// Revision: 1.0
+// Revision: 2.0
 // Purpose:  Defines a template for
 //    parsing ELF 32-bit and 64-bit files.
-//    It parses only the execution view 
-//    used for instantiating processes.
 //----------------------------------------
 
 // Define structures used in ELF files
 
 // ELF Header Types
 // ELF identification element
+
+// Accelerate a slow lookup with an array
+local int sec_tbl_elem[255];
+
 typedef enum <uchar> {
 			ELFCLASSNONE	=0,
 			ELFCLASS32	=1,
@@ -52,6 +54,11 @@ typedef struct {
 	char		file_identification[4];
 	ei_class_2_e	ei_class_2;
 	ei_data_e	ei_data;
+	if( ei_data == ELFDATA2LSB ) {
+		LittleEndian();
+	} else {
+		BigEndian();
+	}
 	ei_version_e	ei_version;
 	ei_osabi_e	ei_osabi;
 	uchar	ei_abiversion;
@@ -63,14 +70,27 @@ typedef struct {
 //32 bit
 typedef	uint32 Elf32_Word;
 typedef uint32 Elf32_Off;
-typedef uint32 Elf32_Addr;
+typedef uint32 Elf32_Addr <read=VAddr32>;
 typedef uint16 Elf32_Half;
+typedef	uint32 Elf32_Xword;
 //64 bit
 typedef	uint32 Elf64_Word;
 typedef uint64 Elf64_Off;
-typedef uint64 Elf64_Addr;
+typedef uint64 Elf64_Addr <read=VAddr64>;
 typedef uint16 Elf64_Half;
 typedef uint64 Elf64_Xword;
+
+string VAddr32( Elf32_Addr &addr ) {
+	local char buf[128];
+	SPrintf( buf, "0x%08X", addr );
+	return buf;
+}
+
+string VAddr64( Elf64_Addr &addr ) {
+	local char buf[128];
+	SPrintf( buf, "0x%016LX", addr );
+	return buf;
+}
 
 typedef enum <Elf32_Half> {
 			ET_NONE		=0,
@@ -82,7 +102,7 @@ typedef enum <Elf32_Half> {
 			ET_HIOS		=0xfeff,
 			ET_LOPROC	=0xff00,
 			ET_HIPROC	=0xffff
-		      }e_type32_e;
+		      } e_type32_e;
 typedef e_type32_e e_type64_e;
 
 typedef enum <Elf32_Half> {	// list has to to be completed
@@ -196,14 +216,14 @@ typedef enum <Elf32_Half> {	// list has to to be completed
 	EM_SEP		=108,	//Sharp embedded microprocessor	
 	EM_ARCA		=109,	//Arca RISC Microprocessor	
 	EM_UNICORE	=110	//Microprocessor series from PKU-Unity Ltd. and MPRC of Peking University
-		      }e_machine32_e;
+		      } e_machine32_e;
 
 typedef e_machine32_e e_machine64_e;
 
 typedef enum <Elf32_Word> {
 			EV_NONE		=0,
 			EV_CURRENT	=1
-		      }e_version32_e;
+		      } e_version32_e;
 typedef e_version32_e e_version64_e;
 
 
@@ -220,54 +240,427 @@ typedef enum <Elf32_Word> {
 			PT_HIOS		=0x6fffffff,
 			PT_LOPROC	=0x70000000,
 			PT_HIPROC	=0x7fffffff
-		      }p_type32_e;
+		      } p_type32_e;
 typedef p_type32_e p_type64_e;
 
 typedef enum <Elf32_Word> {
-			___	=0,
-			__X	=1,
-			_W_	=2,
-			_WX	=3,
-			R__	=4,
-			R_X	=5,
-			RW_	=6,
-			RWX	=7
-		      }p_flags32_e;
+			PF_None			=0,
+			PF_Exec			=1,
+			PF_Write		=2,
+			PF_Write_Exec		=3,
+			PF_Read			=4,
+			PF_Read_Exec		=5,
+			PF_Read_Write		=6,
+			PF_Read_Write_Exec	=7
+		      } p_flags32_e;
 typedef p_flags32_e p_flags64_e;
+
+typedef enum <Elf32_Word> {
+			SHN_UNDEF =     0,      /* undefined, e.g. undefined symbol */
+			SHN_LORESERVE = 0xff00, /* Lower bound of reserved indices */
+			SHN_LOPROC =    0xff00, /* Lower bound processor-specific index */
+			SHN_HIPROC =    0xff1f, /* Upper bound processor-specific index */
+			SHN_LOOS =      0xff20, /* Lower bound OS-specific index */
+			SHN_HIOS =      0xff3f, /* Upper bound OS-specific index */
+			SHN_ABS =       0xfff1, /* Absolute value, not relocated */
+			SHN_COMMON =    0xfff2, /* FORTRAN common or unallocated C */
+			SHN_HIRESERVE = 0xffff  /* Upper bound of reserved indices */
+		} s_name32_e;
+typedef s_name32_e s_name64_e;
+
+typedef enum <Elf32_Word> {
+			SHT_NULL =	0, /* Inactive section header */
+			SHT_PROGBITS =	1, /* Information defined by the program */
+			SHT_SYMTAB =	2, /* Symbol table - not DLL */
+			SHT_STRTAB =	3, /* String table */
+			SHT_RELA =	4, /* Explicit addend relocations, Elf64_Rela */
+			SHT_HASH =	5, /* Symbol hash table */
+			SHT_DYNAMIC =	6, /* Information for dynamic linking */
+			SHT_NOTE =	7, /* A Note section */
+			SHT_NOBITS =	8, /* Like SHT_PROGBITS with no data */
+			SHT_REL	=	9, /* Implicit addend relocations, Elf64_Rel */
+			SHT_SHLIB =	10, /* Currently unspecified semantics */
+			SHT_DYNSYM =	11, /* Symbol table for a DLL */
+
+			SHT_LOOS =	0x60000000, /* Lowest OS-specific section type */
+			SHT_HIOS =	0x6fffffff, /* Highest OS-specific section type */
+
+			SHT_LOPROC =	0x70000000, /* Lowest processor-specific section type */
+			SHT_HIPROC =	0x7fffffff  /* Highest processor-specific section type */
+		} s_type32_e;
+typedef s_type32_e s_type64_e;
+
+string ReservedSectionName( s_name32_e id ) {
+	local char buf[255];
+	if( id == SHN_UNDEF ) return "SHN_UNDEF";
+	if( id >= SHN_LOPROC && id <= SHN_HIPROC ) {
+		SPrintf( buf, "SHN_PROC_%02X", id - SHN_LOPROC );
+		return buf;
+	}
+	if( id >= SHN_LOOS && id <= SHN_HIOS ) {
+		SPrintf( buf, "SHN_OS_%02X", id - SHN_LOOS );
+		return buf;
+	}
+	if( id == SHN_ABS ) return "SHN_ABS";
+	if( id == SHN_COMMON ) return "SHN_COMMON";
+
+	SPrintf( buf, "SHN_RESERVE_%02X", id - SHN_LORESERVE );
+	return buf;
+}
 
 // Program Table 32/64 bit
 typedef struct {  //32bit 
+	local quad off = FTell();
+
 	p_type32_e  p_type;
-	Elf32_Off   p_offset_FROM_FILE_BEGIN;
+	Elf32_Off   p_offset_FROM_FILE_BEGIN <format=hex>;
 	Elf32_Addr  p_vaddr_VIRTUAL_ADDRESS;
 	Elf32_Addr  p_paddr_PHYSICAL_ADDRESS;	
 	Elf32_Word  p_filesz_SEGMENT_FILE_LENGTH;
 	Elf32_Word  p_memsz_SEGMENT_RAM_LENGTH;	
 	p_flags32_e p_flags;
 	Elf32_Word  p_align; 
-} program_table_entry32_t;
+
+    if( p_filesz_SEGMENT_FILE_LENGTH > 0 ) {
+	    FSeek(p_offset_FROM_FILE_BEGIN);
+	    char        p_data[p_filesz_SEGMENT_FILE_LENGTH];
+    }
+
+	FSeek(off + file.elf_header.e_phentsize_PROGRAM_HEADER_ENTRY_SIZE_IN_FILE);
+} program_table_entry32_t <read=ProgramInfo32,optimize=false>;
 typedef struct {  //64bit 
+	local quad off = FTell();
+
 	p_type64_e  p_type;
 	p_flags64_e p_flags;
-	Elf64_Off   p_offset_FROM_FILE_BEGIN;
+	Elf64_Off   p_offset_FROM_FILE_BEGIN <format=hex>;
 	Elf64_Addr  p_vaddr_VIRTUAL_ADDRESS;
 	Elf64_Addr  p_paddr_PHYSICAL_ADDRESS;	
 	Elf64_Xword p_filesz_SEGMENT_FILE_LENGTH;
 	Elf64_Xword p_memsz_SEGMENT_RAM_LENGTH;	
 	Elf64_Xword p_align; 
-} program_table_entry64_t;
 
+    if( p_filesz_SEGMENT_FILE_LENGTH > 0 ) {
+	    FSeek(p_offset_FROM_FILE_BEGIN);
+    	char        p_data[p_filesz_SEGMENT_FILE_LENGTH];
+    }
+
+	FSeek(off + file.elf_header.e_phentsize_PROGRAM_HEADER_ENTRY_SIZE_IN_FILE);
+} program_table_entry64_t <read=ProgramInfo64,optimize=false>;
+
+string ProgramType( p_type64_e type ) {
+	switch( type ) {
+		case PT_NULL:		return "NULL";
+		case PT_LOAD:		return "Loadable Segment";
+		case PT_DYNAMIC:	return "Dynamic Segment";
+		case PT_INERP:		return "Interpreter Path";
+		case PT_NOTE:		return "Note";
+		case PT_SHLIB:		return "PT_SHLIB";
+		case PT_PHDR:		return "Program Header";
+		default:		return "Unknown Section";
+	}
+}
+
+string ProgramFlags( p_flags64_e flags ) {
+	local string rv = "(";
+	
+	rv += ( flags & PF_Read ) ? "R" : "_";
+	rv += ( flags & PF_Write ) ? "W" : "_";
+	rv += ( flags & PF_Exec ) ? "X" : "_";
+	rv += ")";
+	return rv;
+}
+
+string ProgramInfo64( program_table_entry64_t &ent ) {
+	return ProgramFlags( ent.p_flags ) + " " + ProgramType( ent.p_type );
+}
+
+string ProgramInfo32( program_table_entry32_t &ent ) {
+	return ProgramFlags( ent.p_flags ) + " " + ProgramType( ent.p_type );
+}
+
+// ************************************* Section Table ***************************************
+
+typedef enum <Elf32_Xword> {
+			SF32_None		=0,
+			SF32_Exec		=1,
+			SF32_Alloc		=2,
+			SF32_Alloc_Exec		=3,
+			SF32_Write		=4,
+			SF32_Write_Exec		=5,
+			SF32_Write_Alloc	=6,
+			SF32_Write_Alloc_Exec	=7
+		      } s_flags32_e;
+typedef enum <Elf64_Xword> {
+			SF64_None		=0,
+			SF64_Exec		=1,
+			SF64_Alloc		=2,
+			SF64_Alloc_Exec		=3,
+			SF64_Write		=4,
+			SF64_Write_Exec		=5,
+			SF64_Write_Alloc	=6,
+			SF64_Write_Alloc_Exec	=7
+		      } s_flags64_e;
+
+// Pointer to where the next name is located
+local quad section_name_block_off;
+
+typedef struct {
+	s_name32_e	s_name_off <format=hex>;
+	
+	local quad off = FTell();
+	FSeek( section_name_block_off + s_name_off );
+
+	string		s_name_str;
+	
+	FSeek( off );
+} s_name32_t <read=SectionName>;
+
+typedef s_name32_t s_name64_t;
+
+string SectionName( s_name32_t &sect ) {
+	if( sect.s_name_off > SHN_UNDEF && sect.s_name_off < SHN_LORESERVE ) {
+		return sect.s_name_str;
+	}
+	return ReservedSectionName( sect.s_name_off );
+}
+
+typedef struct {  //64bit 
+	local quad off = FTell();
+
+	s_name64_t		s_name;			/* Section name */
+	s_type64_e		s_type;			/* Section type */
+	s_flags64_e		s_flags;		/* Section attributes */
+	Elf64_Addr		s_addr;			/* Virtual address in memory */
+	Elf64_Off		s_offset <format=hex>;	/* Offset in file */
+	Elf64_Xword		s_size;			/* Size of section */
+	Elf64_Word		s_link;			/* Link to other section */
+	Elf64_Word		s_info;			/* Miscellaneous information */
+	Elf64_Xword		s_addralign;		/* Address alignment boundary */
+	Elf64_Xword		s_entsize;		/* Entry size, if section has table */
+
+	if( s_type != SHT_NOBITS && s_type != SHT_NULL && s_size > 0 ) {
+		FSeek(s_offset);
+
+		char			data[s_size];
+    }
+	FSeek(off + file.elf_header.e_shentzise_SECTION_HEADER_ENTRY_SIZE);
+} section_table_entry64_t <optimize=false>;
+// Section Table 32/64 bit
+typedef struct {  //32bit 
+	local quad off = FTell();
+
+	s_name32_t		s_name;			/* Section name */
+	s_type32_e		s_type;			/* Section type */
+	s_flags32_e		s_flags;		/* Section attributes */
+	Elf32_Addr		s_addr;			/* Virtual address in memory */
+	Elf32_Off		s_offset <format=hex>;	/* Offset in file */
+	Elf32_Xword		s_size;			/* Size of section */
+	Elf32_Word		s_link;			/* Link to other section */
+	Elf32_Word		s_info;			/* Miscellaneous information */
+	Elf32_Xword		s_addralign;		/* Address alignment boundary*/
+	Elf32_Xword		s_entsize;		/* Entry size, if section has table */
+	
+	if( s_type != SHT_NOBITS && s_type != SHT_NULL && s_size > 0 ) {
+		FSeek(s_offset);
+
+		char			s_data[s_size];
+    }
+	FSeek(off + file.elf_header.e_shentzise_SECTION_HEADER_ENTRY_SIZE);
+} section_table_entry32_t <read=SectionName32,optimize=false>;
+
+string SectionName64( section_table_entry64_t &sect ) {
+	return SectionName( sect.s_name );
+}
+
+string SectionName32( section_table_entry32_t &sect ) {
+	return SectionName( sect.s_name );
+}
+
+// ************************************** Symbol Table ***************************************
+
+local quad symbol_name_block_off;
+
+typedef struct {
+	Elf32_Word	sym_name_off <format=hex>;	/* Symbol table name offset */
+
+	local quad off = FTell();
+	FSeek( symbol_name_block_off + sym_name_off );
+
+	string		sym_name_str;
+	
+	FSeek( off );
+} sym_name32_t <read=SymbolName,optimize=false>;
+typedef sym_name32_t sym_name64_t;
+	
+string SymbolName( sym_name32_t &sym ) {
+	if( sym.sym_name_off > 0 ) {
+		return sym.sym_name_str;
+	}
+	return "<Undefined>";
+}
+
+typedef enum <unsigned char> {
+	STB_LOCAL = 0,
+	STB_GLOBAL = 1,
+	STB_WEAK = 2,
+	STB_OS_1 = 10,
+	STB_OS_2 = 11,
+	STB_OS_3 = 12,
+	STB_PROC_1 = 13,
+	STB_PROC_2 = 14,
+	STB_PROC_3 = 15
+} sym_info_bind_e;
+
+typedef enum <unsigned char> {
+	STT_NOTYPE = 0,
+	STT_OBJECT = 1,
+	STT_FUNC = 2,
+	STT_SECTION = 3,
+	STT_FILE = 4,
+	STT_OS_1 = 10,
+	STT_OS_2 = 11,
+	STT_OS_3 = 12,
+	STT_PROC_1 = 13,
+	STT_PROC_2 = 14,
+	STT_PROC_3 = 15
+} sym_info_type_e;
+
+typedef struct {
+	BitfieldDisablePadding();
+	if( IsBigEndian() ) {
+		uchar	sym_info_bind:4;
+		uchar	sym_info_type:4;
+	} else {
+		uchar	sym_info_type:4;
+		uchar	sym_info_bind:4;
+	}
+	BitfieldEnablePadding();
+} sym_info_t <read=SymInfoEnums>;
+
+string SymInfoEnums( sym_info_t &info ) {
+	local sym_info_bind_e x = info.sym_info_bind;
+	local sym_info_type_e y = info.sym_info_type;
+	return EnumToString( x ) + " | " + EnumToString( y );
+}
+
+typedef struct {
+   Elf64_Word		sym_name;	/* Symbol name */
+   unsigned char	sym_info;	/* Type and Binding attributes */
+   unsigned char	sym_other;	/* Reserved */
+   Elf64_Half		sym_shndx;	/* Section table index */
+   Elf64_Addr		sym_value;	/* Symbol value */
+   Elf64_Xword		sym_size;	/* Size of object (e.g., common) */
+} Elf64_Sym_fixed;
+
+typedef struct {
+   Elf32_Word		sym_name;	/* Symbol name */
+   Elf32_Addr		sym_value;	/* Symbol value */
+   Elf32_Xword		sym_size;	/* Size of object (e.g., common) */
+   unsigned char	sym_info;	/* Type and Binding attributes */
+   unsigned char	sym_other;	/* Reserved */
+   Elf32_Half		sym_shndx;	/* Section table index */
+} Elf32_Sym_fixed;
+
+typedef struct {
+   sym_name64_t		sym_name;	/* Symbol name */
+   sym_info_t		sym_info;	/* Type and Binding attributes */
+   unsigned char	sym_other;	/* Reserved */
+   Elf64_Half		sym_shndx;	/* Section table index */
+   Elf64_Addr		sym_value;	/* Symbol value */
+   Elf64_Xword		sym_size;	/* Size of object (e.g., common) */
+   
+   if( sym_size && SectionHasData( sym_shndx ) ) {
+   	local quad off = FTell();
+   	FSeek( SectionVAddrOffset( sym_shndx, sym_value ) );
+   	
+   	char sym_data[sym_size];
+   	
+   	FSeek( off );
+   }
+} Elf64_Sym <read=SymbolName64,optimize=false>;
+
+typedef struct {
+   sym_name32_t		sym_name;	/* Symbol name */
+   Elf32_Addr		sym_value;	/* Symbol value */
+   Elf32_Xword		sym_size;	/* Size of object (e.g., common) */
+   sym_info_t		sym_info;	/* Type and Binding attributes */
+   unsigned char	sym_other;	/* Reserved */
+   Elf32_Half		sym_shndx;	/* Section table index */
+
+   if( sym_size && SectionHasData( sym_shndx ) ) {
+   	local quad off = FTell();
+   	FSeek( SectionVAddrOffset( sym_shndx, sym_value ) );
+   	
+   	char sym_data[sym_size];
+   	
+   	FSeek( off );
+   }
+} Elf32_Sym <read=SymbolName32,optimize=false>;
+
+string SymbolName64( Elf64_Sym &sym ) {
+	return ( sym.sym_size ? "" : "[U] " ) + SymbolName( sym.sym_name );
+}
+
+string SymbolName32( Elf32_Sym &sym ) {
+	return ( sym.sym_size ? "" : "[U] " ) + SymbolName( sym.sym_name );
+}
+
+// **************************************** ELF File *****************************************
+
+local int iter;
+
+int FindNamedSection( string sect ) {
+//	local int iter;
+	
+	for( iter=0; iter < file.elf_header.e_shnum_NUMBER_OF_SECTION_HEADER_ENTRIES; iter++ ) {
+		if( Strcmp( file.section_header_table.section_table_element[ iter ].s_name.s_name_str, sect ) == 0 ) {
+			return iter;
+		}
+	}
+	
+	return -1;
+}
+
+quad FindNamedSectionBlock( string sect ) {
+	local int off = FindNamedSection( sect );
+	if( off != -1 ) 
+		return file.section_header_table.section_table_element[off].s_offset;
+	
+	return -1;
+}
+
+int SectionHasData( Elf64_Half s_index ) {
+	// This is ridiculously slow for some reason, so cache our results in an array
+    if( sec_tbl_elem[s_index] == -1 ) {
+       sec_tbl_elem[s_index] = exists( file.section_header_table.section_table_element[s_index].s_data );
+    } 
+	return sec_tbl_elem[s_index];
+}
+
+quad SectionVAddrOffset( Elf64_Half s_index, Elf64_Addr s_vaddr ) {
+	if( s_index < file.elf_header.e_shnum_NUMBER_OF_SECTION_HEADER_ENTRIES ) {
+		return file.section_header_table.section_table_element[s_index].s_offset + s_vaddr -
+			file.section_header_table.section_table_element[s_index].s_addr;
+	}
+	return 0;
+}
 
 // Structure of elf
-	struct FILE {
-	       	struct ELF_HEADER {
-			e_ident_t  	e_ident;
-			if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 )
-			{
+struct {
+    local int i;
+    for( i=0; i<255; i++ ) {
+        sec_tbl_elem[i] = -1;
+    }
+
+	struct {
+		e_ident_t  	e_ident;
+		if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 )
+		{
 			//32-Bit definitions of ELF Header
-            		e_type32_e 	e_type;
-	    		e_machine32_e 	e_machine;
-	    		e_version32_e 	e_version;
+			e_type32_e 	e_type;
+			e_machine32_e 	e_machine;
+			e_version32_e 	e_version;
 			Elf32_Addr 	e_entry_START_ADDRESS;
 			Elf32_Off	e_phoff_PROGRAM_HEADER_OFFSET_IN_FILE;
 			Elf32_Off  	e_shoff_SECTION_HEADER_OFFSET_IN_FILE;
@@ -278,13 +671,13 @@ typedef struct {  //64bit
 			Elf32_Half 	e_shentzise_SECTION_HEADER_ENTRY_SIZE;
 			Elf32_Half 	e_shnum_NUMBER_OF_SECTION_HEADER_ENTRIES;									    
 			Elf32_Half 	e_shtrndx_STRING_TABLE_INDEX;
-			}
-			else
-			{
+		}
+		else
+		{
 			//64-Bit definitions of ELF Header
-            		e_type64_e 	e_type;
-	    		e_machine64_e 	e_machine;
-	    		e_version64_e 	e_version;
+			e_type64_e 	e_type;
+			e_machine64_e 	e_machine;
+			e_version64_e 	e_version;
 			Elf64_Addr 	e_entry_START_ADDRESS;
 			Elf64_Off	e_phoff_PROGRAM_HEADER_OFFSET_IN_FILE;
 			Elf64_Off  	e_shoff_SECTION_HEADER_OFFSET_IN_FILE;
@@ -295,21 +688,82 @@ typedef struct {  //64bit
 			Elf64_Half 	e_shentzise_SECTION_HEADER_ENTRY_SIZE;
 			Elf64_Half 	e_shnum_NUMBER_OF_SECTION_HEADER_ENTRIES;									    
 			Elf64_Half 	e_shtrndx_STRING_TABLE_INDEX;
-			}		
-        	} elf_header;
-		struct PROGRAM_HEADER_TABLE {
-			if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 )
-			{
-			//32-Bit definitions of Program Table
-			program_table_entry32_t	program_table_element[file.elf_header.e_phnum_NUMBER_OF_PROGRAM_HEADER_ENTRIES];
-			}
-			else
-			{
-			//64-Bit definitions of Program Table
+		}		
+	} elf_header;
 
-			program_table_entry64_t	program_table_element[file.elf_header.e_phnum_NUMBER_OF_PROGRAM_HEADER_ENTRIES];
-			}
+	// Find the program table
+    if( file.elf_header.e_phnum_NUMBER_OF_PROGRAM_HEADER_ENTRIES > 0 ) {
+        FSeek(file.elf_header.e_phoff_PROGRAM_HEADER_OFFSET_IN_FILE);
+        struct {
+	        if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 ) {
+		        program_table_entry32_t	program_table_element[file.elf_header.e_phnum_NUMBER_OF_PROGRAM_HEADER_ENTRIES];
+	        } else {
+		        program_table_entry64_t	program_table_element[file.elf_header.e_phnum_NUMBER_OF_PROGRAM_HEADER_ENTRIES];
+	        }
+        } program_header_table;
+    }
 
-		} program_header_table;
-		
-    } file;
+	// Find the header name location
+	local quad section_name_off = 
+		file.elf_header.e_shoff_SECTION_HEADER_OFFSET_IN_FILE +
+		( file.elf_header.e_shentzise_SECTION_HEADER_ENTRY_SIZE *
+		  file.elf_header.e_shtrndx_STRING_TABLE_INDEX );
+
+	// Find the header name block
+	if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 ) {
+		section_name_block_off = ReadUInt( section_name_off  + 2 * sizeof( Elf32_Word ) +
+			sizeof( Elf32_Xword ) + sizeof( Elf32_Addr ) );
+	} else {
+		section_name_block_off = ReadUQuad( section_name_off  + 2 * sizeof( Elf64_Word ) +
+			sizeof( Elf64_Xword ) + sizeof( Elf64_Addr ) );
+	}
+
+	// Find the section headers
+    if( file.elf_header.e_shnum_NUMBER_OF_SECTION_HEADER_ENTRIES > 0 ) {
+	    FSeek(file.elf_header.e_shoff_SECTION_HEADER_OFFSET_IN_FILE);
+	    struct {
+		    if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 ) {
+                sec_tbl_cur_elem = 0;
+			    section_table_entry32_t	section_table_element[file.elf_header.e_shnum_NUMBER_OF_SECTION_HEADER_ENTRIES];
+		    } else {
+                sec_tbl_cur_elem = 0;
+			    section_table_entry64_t	section_table_element[file.elf_header.e_shnum_NUMBER_OF_SECTION_HEADER_ENTRIES];
+		    }
+	    } section_header_table;
+    }
+
+	local int sym_sect;
+	local int sym_name_sect;
+
+	// Find the symbol section
+	sym_sect = FindNamedSection( ".symtab" );
+	if( sym_sect >= 0 ) {
+		sym_name_sect = file.section_header_table.section_table_element[sym_sect].s_link;
+		symbol_name_block_off = file.section_header_table.section_table_element[sym_name_sect].s_offset;
+
+		FSeek( file.section_header_table.section_table_element[sym_sect].s_offset );
+		struct {
+			if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 ) {
+				Elf32_Sym symtab[file.section_header_table.section_table_element[sym_sect].s_size / sizeof(Elf32_Sym_fixed)];
+			} else {
+				Elf64_Sym symtab[file.section_header_table.section_table_element[sym_sect].s_size / sizeof(Elf64_Sym_fixed)];
+			}
+		} symbol_table;
+	}
+	
+	// Find the dynamic symbol section
+	sym_sect = FindNamedSection( ".dynsym" );
+	if( sym_sect >= 0 ) {
+		sym_name_sect = file.section_header_table.section_table_element[sym_sect].s_link;
+		symbol_name_block_off = file.section_header_table.section_table_element[sym_name_sect].s_offset;
+
+		FSeek( file.section_header_table.section_table_element[sym_sect].s_offset );
+		struct {
+			if (file.elf_header.e_ident.ei_class_2 == ELFCLASS32 ) {
+				Elf32_Sym symtab[file.section_header_table.section_table_element[sym_sect].s_size / sizeof(Elf32_Sym_fixed)];
+			} else {
+				Elf64_Sym symtab[file.section_header_table.section_table_element[sym_sect].s_size / sizeof(Elf64_Sym_fixed)];
+			}
+		} dynamic_symbol_table;
+	}
+} file;
