@@ -5,7 +5,7 @@
 // Author:  Alexander Sherman
 // Purpose: Defines a template for
 //    parsing RAR files.
-// Revision: 7.02
+// Revision: 7.03
 //-----------------------------------
 
 
@@ -140,12 +140,11 @@ struct MainHeadFlags
 	ubyte ADD_SIZE_PRESENT : 1;
 };
 
-/*
+
 enum <byte> FileDictType
 {
 	_64K, _128K, _256K, _512K, _1024K, _2048K, _4096K, _Directory
 };
-*/
 
 struct FileHeadFlags
 {
@@ -154,7 +153,7 @@ struct FileHeadFlags
 	ubyte PASSWORD_ENCRYPTED : 1;
 	ubyte FILE_COMMENT_PRESENT : 1;
 	ubyte SOLID : 1;
-	/* FileDictType */ ubyte DICTIONARY : 3;
+	FileDictType DICTIONARY : 3;
 	ubyte HIGH_SIZE : 1;
 	ubyte has_UNICODE_FILENAME : 1;
 	ubyte ENCRYPTION_SALT : 1;
@@ -169,11 +168,9 @@ struct RarBlock
 {
 	local quad iOfs = FTell();
 
-	SetForeColor(cRed);
-	uint16 HEAD_CRC <format=hex>;
-	SetForeColor(cBlack);
+	uint16 HEAD_CRC <format=hex, fgcolor=cRed>;
 
-	RarBlockType HeadType;
+	RarBlockType HeadType <fgcolor=cGreen>;
 
 	_flags = ReadUShort(FTell());
 
@@ -188,16 +185,16 @@ struct RarBlock
 
 	if (HeadType < MARKER || HeadType > _END_)
 	{
-		Warning("Unknown Header Type (0x%02x) in Block #%u", HeadType, iBlocksCounter);
-		Printf("Unknown Header Type (0x%02x) in Block #%u\n", HeadType, iBlocksCounter);
+		Warning("Unknown Header Type (0x%02x) in Block #%Lu", HeadType, iBlocksCounter);
+		Printf("Unknown Header Type (0x%02x) in Block #%Lu\n", HeadType, iBlocksCounter);
 	}
 
 	uint16 HeaderSize;
 
 	if (HeaderSize < 7)
 	{
-		Warning("Invalid block size (%u) in Block #%u", HeaderSize, iBlocksCounter);
-		Printf("Invalid block size (%u) in Block #%u\n", HeaderSize, iBlocksCounter);
+		Warning("Invalid block size (%u) in Block #%Lu", HeaderSize, iBlocksCounter);
+		Printf("Invalid block size (%u) in Block #%Lu\n", HeaderSize, iBlocksCounter);
 		return -1;
 	}
 
@@ -206,8 +203,8 @@ struct RarBlock
 		local uint16 crcCheck = Checksum(CHECKSUM_CRC32, startof(HeadType), HeaderSize-sizeof(HEAD_CRC)) & 0xFFFF;
 		if (crcCheck != HEAD_CRC)
 		{
-			Warning("Header CRC mismatch in Block #%u", iBlocksCounter);
-			Printf("Header CRC mismatch in Block #%u\n", iBlocksCounter);
+            Warning("Header CRC mismatch in Block #%Lu", iBlocksCounter);
+			Printf("Header CRC mismatch in Block #%Lu: expected CRC is 0x%X, got 0x%X\n", iBlocksCounter, crcCheck, HEAD_CRC);
 			++iBadCRCCounter;
 		}
 	}
@@ -260,7 +257,7 @@ struct RarBlock
 		ubyte _reserved[iOfs];
 
 	if (RawDataSize > 0)
-		ubyte _raw[RawDataSize];
+		ubyte _raw[RawDataSize] <format=hex, fgcolor=cBlue>;
 };
 
 struct FileHeadBlock
@@ -455,5 +452,5 @@ if (iFiles || iDirs)
 Printf("Files: %Lu, Dirs: %Lu, Comments: %Lu, SubBlocks: %Lu, Unpacked Size: %Lu\n", iFiles, iDirs, iComments, iSubBlocks, iTotalUnpackedSize);
 Printf("UNICODE Names: %Lu\n", iUniNames);
 if (iBadCRCCounter)
-	Printf("%u blocks corrupted.\n", iBadCRCCounter);
-Printf("Done. %u blocks processed.\n", iBlocksCounter);
+	Printf("%Lu blocks corrupted.\n", iBadCRCCounter);
+Printf("Done. %Lu blocks processed.\n", iBlocksCounter);
