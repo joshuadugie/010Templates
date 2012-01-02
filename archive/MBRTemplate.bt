@@ -3,10 +3,17 @@
 //
 // Name: MBRTemplate.bt
 // Author: Christian Schaffalitzky
+// Revision: 1.2
 // Purpose: Parse a Master Boot Record on a Harddisk
+// Changes:  
+// 1.2 (A.Babecki): 
+//   - Added BitfieldDisablePadding
+//   - Added unsigned for relsect/numsect
+// 
 //------------------------------------
 
 BitfieldRightToLeft();
+BitfieldDisablePadding();
 
 typedef struct fdisk_partition {
   unsigned char  bootid;         /* bootable?  0=no, 128=yes  */
@@ -17,8 +24,8 @@ typedef struct fdisk_partition {
   unsigned short endhead : 8;    /* ending head number */
   unsigned short endsect : 6;    /* ending sector number */
   unsigned short endcyl  : 10;   /* also a 10 bit nmbr */
-  int relsect;            /* first sector relative to start of disk */
-  int numsect;            /* number of sectors in partition */
+  unsigned int relsect;          /* first sector relative to start of disk */
+  unsigned int numsect;          /* number of sectors in partition */
 };
 
 
