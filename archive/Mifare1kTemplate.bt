@@ -1,14 +1,15 @@
 //-----------------------------------
-// File:     Mifare 1k
+// File:     Mifare Classic 1k
 // Author:   Ruben Boonen (b33f)
 //           http://www.fuzzysecurity.com/
-// Purpose:  Basic structure
+// Purpose:  Basic Structure
 //-----------------------------------
 
 struct FILE {
         struct Manufacturer_block {
             char    Card_UID[4] <fgcolor=cDkGreen>;
-            char    Internal[12] <fgcolor=cWhite>;
+			char	LRC[1] <fgcolor=cDkRed>;
+            char    Internal[11] <fgcolor=cWhite>;
             char    Data[32];
             char    Key_A[6] <bgcolor=cDkGray, fgcolor=cLtRed>;
             char    Access_Bits[3] <bgcolor=cDkGray, fgcolor=cWhite>;
@@ -16,12 +17,12 @@ struct FILE {
             char    Key_B[6] <bgcolor=cDkGray, fgcolor=cYellow>;
         } manufacturer_block;
 
-        struct Blocks {
+        struct Sec_4blk {
             char    Data[48];
             char    Key_A[6] <bgcolor=cDkGray, fgcolor=cLtRed>;
             char    Access_Bits[3] <bgcolor=cDkGray, fgcolor=cWhite>;
             char    GPB[1] <bgcolor=cDkGray, fgcolor=cLtBlue>;
             char    Key_B[6] <bgcolor=cDkGray, fgcolor=cYellow>;
-        } blocks[ 15 ];
+        } sec_4blk[ 15 ];
 
     } file  <bgcolor=cSilver>;
