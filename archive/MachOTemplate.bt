@@ -607,6 +607,7 @@ typedef struct {
     case FUNCTION_STARTS :
     case CODE_SIGNATURE :
     case SEGMENT_SPLIT_INFO:
+    case DATA_IN_CODE:
         uint32 data_offset;
         uint32 data_size;
         break;
