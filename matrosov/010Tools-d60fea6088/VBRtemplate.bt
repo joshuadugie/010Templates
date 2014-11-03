@@ -1,0 +1,48 @@
+//------------------------------------
+//--- 010 Editor v3.2.1 Binary Template
+//
+// Name: VBRTemplate.bt
+// Author: Aleksandr Matrosov (@matrosov)
+// Revision: 1.0
+// Purpose: Parse a Volume Boot Record (VBR) on a harddisk
+//------------------------------------
+
+
+typedef struct BIOS_PARAMETR_BLOCK {
+    WORD bytesPerSector;
+    BYTE sectoresPerCluster;
+    WORD reservedSectors;
+    BYTE filler[20];
+};
+
+typedef struct EXT_BIOS_PARAMETR_BLOCK {
+    BYTE filler_1[4];
+    INT64 mftLCN;                   // LCN = logical cluster number 
+    INT64 mftMirrLCN;               // location of MFT backup copy
+    BYTE clustersPerMftFileRecord;  // clusters per File record in MFT
+    BYTE filler_2[3];
+    BYTE clustersPerMftIndexRecord; // clusters per Index record in MFT
+    BYTE filler[3];
+    INT64 volumeSN;                 // SN = serial number 
+    BYTE filler_3[4];
+};
+
+typedef struct BOOTSTRAP_CODE {
+    BYTE code[426];                 // boot sectore machine code
+    WORD endOfSector;               // 0x55AA
+};
+
+typedef struct _BOOTSECTOR {
+    BYTE jmp[3];                    // JMP instruction and NOP
+    BYTE oemID[8];                  // NTFS
+    BIOS_PARAMETR_BLOCK bpb;
+    EXT_BIOS_PARAMETR_BLOCK ebpb;
+    BOOTSTRAP_CODE bootstrap;
+};
+ 
+LittleEndian();
+
+FSeek(0);
+_BOOTSECTOR VBR;
+
+

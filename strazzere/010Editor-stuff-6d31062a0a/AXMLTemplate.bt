@@ -1,0 +1,228 @@
+//--------------------------------------
+//--- 010 Editor v5.0.1 Binary Template
+//
+// File: AXMLTemplate.bt
+// Author: Tim Strazzere <diff@lookout.com> <strazz@gmail.com>
+// Revision: 0.3
+// Purpose: A template for analyzing Android XML (AXML) files
+//
+// License: This file is released into the public domain. People may 
+//          use it for any purpose, commercial or otherwise. 
+//--------------------------------------
+
+//--------------------------------------
+// Version 0.3 (2014-11-13)
+// ADDED:
+//  - Colorize
+// Version 0.2 (2014-11-13)
+// ADDED:
+//  - Parsing of attributes
+//  - String reader for attributes
+// Version 0.1 (2014-11-13)
+// ADDED:
+//  - First revision
+//--------------------------------------
+
+//--------------------------------------
+// TODO:
+//  - Check for errors
+//  - Flesh out extra comments and string-readers
+//  - Clean up and stop assuming thing
+//  - Finish ATTRIBUTE_TYPE enum - likely missing at least floats
+//--------------------------------------
+
+typedef enum <uint> {
+    STRING          = 0x001C0001,
+    RESOURCE_ID     = 0x00080180,
+    START_NAMESPACE = 0x00100100,
+    END_NAMESPACE   = 0x00100101,
+    START_TAG       = 0x00100102,
+    END_TAG         = 0x00100103,
+    TEXT            = 0x00100104
+} CHUNK_TYPE <format=hex>;
+
+typedef struct {
+    // This might be a uleb128?
+    ushort length;
+    ubyte data[length * 2];
+} special_string <read=SpecialStringRead, comment="String Pool">;;
+
+string SpecialStringRead(special_string &item) {
+    string s;
+    local int i;
+    for(i = 0; i < item.length * 2; i += 2) {
+        s = SPrintf(s, "%s%c", s, item.data[i]);
+    }
+    return s;
+}
+
+typedef struct (int pool_offset) {
+    uint item_offset;
+
+    local int64 original_position = FTell();
+    FSeek(pool_offset + item_offset + 8 /* Skip the magic and file size ? */);
+
+    special_string string_data <comment="Pool item">;
+
+    FSeek(original_position);
+} pool_item <read=PoolItemReader, optimize=false>;
+
+string PoolItemReader(pool_item &item) {
+    string s;
+    local int i;
+    for(i = 0; i < item.string_data.length * 2; i += 2) {
+        s = SPrintf(s, "%s%c", s, item.string_data.data[i]);
+    }
+    return s;
+}
+
+typedef struct (int size, int pool_offset) {
+    local int s = size;
+    pool_item string_item(pool_offset)[size] <comment="String Pool Item">;
+} item_pool <read=StringPoolRead, comment="String Pool">;
+
+string StringPoolRead(item_pool &l) {
+    local string s;
+    s = SPrintf(s, "%d strings", l.s);
+    return s;
+}
+
+typedef struct {
+    CHUNK_TYPE chunk_type;
+    uint chunk_size;
+    uint string_count;
+    uint style_count;
+    uint unknown;
+    uint string_pool_offset;
+    uint style_pool_offset;
+    item_pool stringpool(string_count, string_pool_offset);
+    item_pool stylepool(style_count, style_pool_offset);
+} string_chunk;
+
+typedef struct {
+    CHUNK_TYPE chunk_type;
+    uint chunk_size;
+    uint resource_ids[chunk_size/4 - 2] <format=hex>;
+} resource_chunk;
+
+typedef enum <uint> {
+    STRING_TYPE = 0x10000008,
+    INT_TYPE    = 0x03000008
+} ATTRIBUTE_TYPE <format=hex>;
+
+typedef struct {
+    uint uri  <format=hex>;
+    uint name;
+    uint string_data <format=hex>;
+    ATTRIBUTE_TYPE type;
+    uint data  <format=hex>;
+} attribute <read=AttributeRead>;
+
+string AttributeRead(attribute &i) {
+
+    local string uri;
+    if(i.uri > 0 && i.uri < 0xFFFFFFFF) {
+        PoolItemReader(strings.stringpool.string_item[i.uri]);
+    }
+    if(Strcmp("", uri) == 0) {
+        uri = "NULL";
+    }
+
+    local string name;
+    if(i.name > 0 && i.name < 0xFFFFFFFF) {
+        PoolItemReader(strings.stringpool.string_item[i.name]);
+    }
+    if(Strcmp("", name) == 0) {
+        name = "NULL";
+    }
+
+    local string data;
+    if(i.data > 0 && i.data < 0xFFFFFFFF) {
+        data = PoolItemReader(strings.stringpool.string_item[i.data]);
+    }
+    if(Strcmp("", data) == 0) {
+        data = "NULL";
+    }
+    local string s;
+    s = SPrintf(s, "%s : %s : %s", uri, name, data);
+    return s;
+}
+
+typedef struct {
+    CHUNK_TYPE chunk_type;
+    uint chunk_size;
+    uint line_number;
+    uint unknown <format=hex>;
+    switch(chunk_type) {
+        case START_NAMESPACE :
+        case END_NAMESPACE :
+            uint prefix;
+            uint uri;
+            break;
+        case START_TAG :
+            uint namespace_uri  <format=hex>;
+            uint name;
+            uint flags  <format=hex>;
+            uint attribute_count;
+            uint class_attribute;
+            attribute attributes[attribute_count];
+            break;
+        case END_TAG :
+            uint namespace_uri <format=hex>;
+            uint name;
+            break;
+        case TEXT :
+            uint name;
+            uint unknown2 <format=hex>;
+            uint unknown3 <format=hex>;
+            break;
+        default :
+            Printf("Error : Unknown chunk type!\n");
+            break;
+    }
+} chunk <read=ChunkRead, optimize=false>;
+
+string ChunkRead(chunk &i) {
+    switch(i.chunk_type) {
+        case START_NAMESPACE :
+            return "START_NAMESPACE";
+        case START_TAG :
+            local string s;
+            s = SPrintf(s, "START_TAG : %s", PoolItemReader(strings.stringpool.string_item[i.name]));
+            return s;
+        case END_TAG :
+            return "END_TAG";
+        case TEXT :
+            local string s;
+            s = SPrintf(s, "TEXT : %s", PoolItemReader(strings.stringpool.string_item[i.name]));
+            return s;
+        case END_NAMESPACE :
+            return "END_NAMESPACE";
+        default :
+            return "ERROR";
+    }
+}
+
+typedef struct {
+    ubyte magic[4] <format=hex, comment="Magic bytes">;
+    uint file_size <format=hex, comment="Entire file size">;
+} axml_header;
+
+SetBackColor(cLtAqua);
+axml_header header;
+SetBackColor(cWhite);
+
+SetBackColor(cLtBlue);
+string_chunk strings;
+SetBackColor(cWhite);
+
+FSeek(strings.chunk_size + 8);
+SetBackColor(cLtPurple);
+resource_chunk resources;
+SetBackColor(cWhite);
+
+SetBackColor(cLtYellow);
+while(FTell() != FileSize()) {
+    chunk xml_content;
+}
+SetBackColor(cWhite);

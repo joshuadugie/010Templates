@@ -1,0 +1,73 @@
+//--------------------------------------
+//--- 010 Editor v4.0 Binary Template
+//
+// File: mach-o.bt
+// Author: Anders Hasselqvist
+// Revision:
+// Purpose: Inspect mach-o files
+//--------------------------------------
+
+typedef uint32 cpu_type_t;
+typedef uint32 cpu_subtype_t;
+
+typedef struct {
+    uint32 magic;
+    uint32 nfat_arch;
+} fat_header; // Always in big endian
+
+typedef struct {        cpu_type_t      cputype;        /* cpu specifier (int) */        cpu_subtype_t   cpusubtype;     /* machine specifier (int) */        uint32          offset;         /* file offset to this object file */        uint32          size;           /* size of this object file */        uint32          align;          /* alignment as a power of 2 */} fat_arch; // Always in big endian
+
+typedef struct {
+    uint32          magic;
+    cpu_type_t      cputype;
+    cpu_subtype_t   cpusubtype;
+    uint32          filetype;
+    uint32          ncmds;
+    uint32          sizeofcmds;
+    uint32          flags;
+} mach_header;
+
+typedef struct {
+    uint32          magic;
+    cpu_type_t      cputype;
+    cpu_subtype_t   cpusubtype;
+    uint32          filetype;
+    uint32          ncmds;
+    uint32          sizeofcmds;
+    uint32          flags;
+    uint32          reserved;
+} mach_header_64;
+
+#define FAT_MAGIC   0xcafebabe
+#define FAT_CIGAM   0xbebafeca
+#define MH_MAGIC    0xfeedface
+#define MH_CIGAM    0xcefaedfe
+#define MH_MAGIC_64 0xfeedfacf
+#define MH_CIGAM_64 0xcffaedfe
+
+void parse(void)
+{
+    local uint32 m;
+    local uchar buff[7];
+
+    ReadBytes(buff, FTell(), 7);
+    if (buff == "!<arch>")
+    {
+        Printf("An archive!!!!");
+        return;
+    }
+
+    m = ReadUInt(FTell());
+    if (m == FAT_MAGIC || m == FAT_CIGAM)
+    {
+        BigEndian();
+        fat_header fatHeader;
+        fat_arch fatArch[fatHeader.nfat_arch];
+    }
+    else if (m == MH_MAGIC || m == MH_CIGAM)
+        mach_header header;
+    else if (m == MH_MAGIC_64 || m == MH_CIGAM_64)
+        mach_header_64 header;
+}
+
+parse();
