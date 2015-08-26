@@ -5,6 +5,9 @@
 // Author: Alex McDonnell
 // Revision: 0.1
 // Purpose: Parse Microsoft CAB files
+// Changes:  
+// 0.2 (SweetScape): 
+//   - Allow for multiple flags to be set at the same time
 //--------------------------------------
 
 // Define structures used in CAB files
@@ -25,7 +28,7 @@ typedef struct {
     ushort  setID;        		/* must be the same for all cabinets in a set */
     ushort  iCabinet;     	    /* number of this cabinet file in a set */
 
-    if(flags == 4){    
+    if(flags & 4){    
 
         ushort cbCFHeader;   	/* (optional) size of per-cabinet reserved area */
         ubyte  cbCFFolder;   	/* (optional) size of per-folder reserved area */
@@ -34,15 +37,17 @@ typedef struct {
         if(cbCFHeader > 0)
             char abReserve[cbCFHeader];  /* (optional) per-cabinet reserved area */
 
-    }else if(flags == 1){
+    }
+    if(flags & 1){
 
         char  	szCabinetPrev[];/* (optional) name of previous cabinet file */
         char  	szDiskPrev[];   /* (optional) name of previous disk */
 
-    }else if(flags == 2){
+    }
+    if(flags & 2){
 
-    char  	szCabinetNext[];  	/* (optional) name of next cabinet file */
-    char  	szDiskNext[];     	/* (optional) name of next disk */
+        char  	szCabinetNext[];  	/* (optional) name of next cabinet file */
+        char  	szDiskNext[];     	/* (optional) name of next disk */
 
     }
 
