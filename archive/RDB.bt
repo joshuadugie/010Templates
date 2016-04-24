@@ -1,13 +1,17 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0 Binary Template
 //
-// File:     RDBTemplate.bt
-// Author:   AnTler
-// Revision: 1.0
-// Purpose:  Defines a template for parsing RDB files.
-// Changes:  
-
-//-----------------------------------
+//      File: RDB.bt
+//   Authors: AnTler
+//   Version: 1.1
+//   Purpose: Defines a template for parsing QQ's RDB files. 
+//  Category: Misc
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-02 SweetScape: Updated header for repository submission.
+//   1.0   AnTler: Initial release.
+//------------------------------------------------
 
 // Define structures used in RDB files
 

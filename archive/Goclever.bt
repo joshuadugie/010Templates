@@ -1,17 +1,21 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v3.2.1 Binary Template
 //
-// File:GocleverTemplate.bt
-// Author:Artur Babecki
-// Revision: 21.02.2012
-// Purpose: template for GOCLEVER Navigation log format 
-//          GPSLogYYYY-MM-DD_xx-xx-xx.bin 
-//          (Model GC-4335 and others)
-//         Generates raport in the human readable form:
-//         Date, Longitude, Latitude, Geoid,  Altitude, Direction.
-//
-//--------------------------------------
-
+//      File: Goclever.bt
+//   Authors: Artur Babecki
+//   Version: 1.1
+//   Purpose: Template for the GOCLEVER GPS Navigation log format 
+//            GPSLogYYYY-MM-DD_xx-xx-xx.bin 
+//            (Model GC-4335 and others).
+//            Generates report in the human readable form:
+//            Date, Longitude, Latitude, Geoid, Altitude, Direction.
+//  Category: Electronics
+// File Mask: GPSLog*.bin
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-11 SweetScape Software: Updated header for repository submission.
+//   1.0   2012-02-21 A Babecki: Initial release.
+//------------------------------------------------
 
 local uint number_of_records;
 local int  i;

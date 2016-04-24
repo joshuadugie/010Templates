@@ -1,11 +1,18 @@
-//--------------------------------------
-//--- 010 Editor v5.0beta1 Binary Template
+//------------------------------------------------
+//--- 010 Editor v5.0 Binary Template
 //
-// File:  UTMPTemplate.bt
-// Author:  Matthew Geiger
-// Revision: 0.1
-// Purpose:  Parsing entries in wtmp and utmp files on *nix hosts
-//--------------------------------------
+//      File: UTMP.bt
+//   Authors: Matthew Geiger
+//   Version: 0.2
+//   Purpose: Interpret entries in utmp and wtmp login 
+//            log files on *nix systems. 
+//  Category: Operating System
+// File Mask: utmp,wtmp
+//  ID Bytes: 
+//   History: 
+//   0.2   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   0.1   M Geiger: Initial release.
+//------------------------------------------------
 
 #define UT_LINESIZE	32
 #define UT_NAMESIZE	32

@@ -1,21 +1,19 @@
-//------------------------------------
+//------------------------------------------------
 //--- 010 Editor v1.2 Binary Template
 //
-// Name: AVITemplate.bt
-// Original Author: Blaine Lefebvre [bl]
-// Contributor: Elias Bachaalany [eb]
-// Purpose: Parse an AVI file
-//
-// Last Updated: 10/02/2006, 04:40 PM
-//
-// History
-// -----------
-// [bl] original version: Blaine Lefevre
-// 10/02/2006:
-// - [eb] Added BITMAPINFO and WAVEFORMATEX proper strfHEADER recognition
-// - [eb] Fixed 'idx1' parsing
-//------------------------------------
-
+//      File: AVI.bt
+//   Authors: Blaine Lefebvre [bl], Elias Bachaalany [eb]
+//   Version: 1.2
+//   Purpose: Parse an AVI movie file.
+//  Category: Video
+// File Mask: *.avi
+//  ID Bytes: 52 49 46 46 [+4] 41 56 49 20 //RIFF????AVI 
+//   History: 
+//   1.2   2016-01-27 SweetScape: Updated header for repository submission, added coloring for header.
+//   1.1   2006-10-02 eb: Added BITMAPINFO and WAVEFORMATEX proper strfHEADER recognition,
+//                      Fixed 'idx1' parsing.
+//   1.0   bl: Initial release.
+//------------------------------------------------
 
 typedef struct
 { 
@@ -275,7 +273,7 @@ typedef struct xroot
     Warning("Not a valid AVI file");
     return -1;
   }
-} ROOT;
+} ROOT <bgcolor=cLtGray>;
 
 local char nheader[4];
 

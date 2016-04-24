@@ -1,12 +1,18 @@
-//------------------------------------
-//--- 010 Editor v2.01 Binary Template
+//------------------------------------------------
+//--- 010 Editor v2.0 Binary Template
 //
-// Name: EOTTemplate.bt
-// Author: Neo (Jiepeng) Tan
-// Revision: 1.0
-// Purpose: Parse an Embedded OpenType (EOT) File Format for Version: 0x00020002
+//      File: EOT.bt
+//   Authors: Neo (Jiepeng) Tan
+//   Version: 1.1
+//   Purpose: Template for parsing the Embedded OpenType (EOT) font file format. 
+//  Category: Font
+// File Mask: *.eot
+//   History: 
+//   1.1   2016-01-29 SweetScape: Updated header for repository submission.
+//   1.0   N Tan: Initial release.
+//
 // Reference: http://www.w3.org/Submission/EOT/
-//------------------------------------
+//------------------------------------------------
 
 LittleEndian();
 

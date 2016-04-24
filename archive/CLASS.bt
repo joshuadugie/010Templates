@@ -1,13 +1,18 @@
-//-------------------------------------------------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.1 Binary Template
 //
-//    File: CLASSTemplate.bt
-//  Author: Kevin O. Grover <kevin@kevingrover.net>
-// Purpose: A template for parsing Java Class (JVM) Files
-// Version: 1.1   2014-08-13
-// History:
-// 2007-02-26  kog  Original Version
-// 2014-08-13  kog  Updated for Java 7/8 Version number (and future)
+//      File: CLASS.bt
+//   Authors: Kevin O. Grover
+//    E-mail: kevin@kevingrover.net
+//   Version: 1.2
+//   Purpose: Parse Java Class (JVM) files. 
+//  Category: Programming
+// File Mask: *.class
+//  ID Bytes: CA FE BA BE
+//   History: 
+//   1.2   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.1   2014-08-13 kog: Updated for Java 7/8 Version number (and future)
+//   1.0   2007-02-26 kog: Original Version
 //
 // This template was written to the "The Java Virtual Machine
 // Specification", Second Edition, by Tim Lindholm, Frank Yellin.
@@ -22,7 +27,7 @@
 //   http://docs.oracle.com/javase/specs/jvms/se7/jvms7.pdf
 //   http://docs.oracle.com/javase/specs/jvms/se8/jvms8.pdf
 //   http://en.wikipedia.org/wiki/Class_file
-//-------------------------------------------------------------------------
+//------------------------------------------------
 
 BigEndian();
 

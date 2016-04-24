@@ -1,17 +1,23 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v3.2.2 Binary Template
 //
-// File: EDIDTemplate.bt
-// Author: Rafael Vuijk
-// Revision: 2012-03-02
-// Purpose: EDID structure parser
-//--------------------------------------
+//      File: EDID.bt
+//   Authors: Rafael Vuijk
+//   Version: 1.1
+//   Purpose: Template for EDID files (Extended 
+//            display identification data). 
+//  Category: Electronics
+// File Mask: edid.bin,*.edid
+//  ID Bytes: 00 FF FF FF FF FF FF 00
+//   History: 
+//   1.1   2016-02-11 SweetScape Software: Updated header for repository submission.
+//   1.0   2012-03-02 R Vuijk: Initial release.
 //
 // NOTE: This template uses variable-size/unoptimized structure arrays.
 // Information source: https://en.wikipedia.org/wiki/Extended_display_identification_data
 // Modeline calculator: http://www.epanorama.net/faq/vga2rgb/calc.html
 //
-//--------------------------------------
+//------------------------------------------------
 
 typedef uint16 EISAId <read=EISAIdToString, write=StringToEISAId>;
 

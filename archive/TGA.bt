@@ -1,12 +1,17 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0.2 Binary Template
 //
-// File:	TGATemplate.bt
-// Author:	Chiuta Adrian Marius
-// E-mail:	camsoftwarero@yahoo.com
-// Revision:	1.0
-// Purpose:	Shows the fields of a TGA image.
-//--------------------------------------
+//      File: TGA.bt
+//   Authors: Chiuta Adrian Marius
+//    E-mail: camsoftwarero@yahoo.com
+//   Version: 1.1
+//   Purpose: Shows the fields of a TGA image.
+//  Category: Image
+// File Mask: *.tga
+//   History: 
+//   1.1   2016-01-28 SweetScape: Updated header for repository submission.
+//   1.0   C Marius:  Initial release.
+//------------------------------------------------
 
 //Definim structurile folosite de TGA
 typedef struct{

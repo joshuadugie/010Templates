@@ -1,11 +1,20 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v5.0 Binary Template
 //
-// File: SRecTemplate.bt
-// Author: Mario Ghecea 
-// Revision: 1A
-// Purpose: Parses Motorola S-REC
-//--------------------------------------
+//      File: SRec.bt
+//   Authors: Mario Ghecea
+//   Version: 1.1
+//   Purpose: Motorola S-REC format template. This should work 
+//            with the S-REC formats based on S1-S9. 
+//  Category: Electronics
+// File Mask: *.s37,*.s28,*.s19
+//  ID Bytes: 53 30 //S0
+//   History: 
+//   1.1   2016-02-12 SweetScape Software: Added some coloring, handle different linefeeds, 
+//                                         custom read function and updated header for repository submission.
+//   1.0   M Ghecea: Initial release.
+//------------------------------------------------
+
 typedef char RECORDTYPE [2];
 typedef char COUNT [2];
 typedef char ADDRESS16  [4];
@@ -19,25 +28,25 @@ local uint rec = 1;
 
 typedef struct
 {
-    RECORDTYPE recordType;
-    COUNT count;
+    RECORDTYPE recordType <bgcolor=cLtPurple>;
+    COUNT count <bgcolor=cLtGray>;
     switch(recordType)
     {
         case "S0": // header           
         case "S1": // 16-bit address record
         case "S5": // total record count
         case "S9": // termination 16-bit 
-            ADDRESS16 address16;
+            ADDRESS16 address16 <bgcolor=cLtAqua>;
             addrwidth = 4;
             break;
         case "S2":  // 24-bit address record
         case "S8":  // termination 24-bit
-            ADDRESS24 address24;
+            ADDRESS24 address24 <bgcolor=cLtAqua>;
             addrwidth = 6;
             break;
         case "S3": // 32-bit address record
         case "S7": // termination 32-bit
-            ADDRESS32 adress32;
+            ADDRESS32 adress32 <bgcolor=cLtAqua>;
             addrwidth = 8;
             break;
         //case "S4":        
@@ -60,11 +69,36 @@ typedef struct
     if (bytesPerLine != 0)
         char data [(bytesPerLine)];
     //Printf("rec# %d bpl: %d %X count : %s\n\r", rec++, bytesPerLine, intval, count);
-    char checksum [2];
-    char crlf[2];
-}SREC;
+    char checksum [2] <bgcolor=cLtGray>;
+}SREC <read=ReadSREC>;
 
-while( !FEof() )
+// Display record type in the value column
+string ReadSREC( struct SREC &s )
 {
-    SREC srec;
+    switch(s.recordType)
+    {
+        case "S0": // header           
+            return "Header";
+        case "S1": // 16-bit address record
+        case "S2": // 24-bit address record
+        case "S3": // 32-bit address record
+            return "Data";
+        case "S5": // total record count
+        case "S6": // total record count
+            return "Count";
+        case "S9": // termination 16-bit 
+        case "S8": // termination 24-bit
+        case "S7": // termination 32-bit
+            return "Termination";
+    }
+    return "";
+}
+
+// Handle different linefeed styles
+local int64 line, lineCount = TextGetNumLines();
+for( line = 0; line < lineCount; line++ )
+{
+    FSeek( TextLineToAddress(line) );
+    if( TextGetLineSize(line,false) > 0 ) // skip empty lines
+        SREC srec;
 }

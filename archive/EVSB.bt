@@ -1,17 +1,25 @@
-//----------------------------------------------------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0.2 Binary Template
 //
-// File:	EVSB_Symbol_Display
-// Author:	Kip Leitner, Panasonic, PSDC NJ, USA, kleitner@pavcal.com	
-// Revision:	1.0	21 January, 2006
-//
-// Purpose:	Decompose EVSB Over-the-Air (OTA) symbols for DTV Transmission	
+//      File: EVSB.bt
+//   Authors: Kip Leitner, Panasonic
+//    E-mail: kleitner@pavcal.com
+//   Version: 1.1
+//   Purpose: Decomposes Video Symbol Stream Files for 
+//            E-8VSB modulation as per ATSC Digital 
+//            Television Standard (A/53). 
+//  Category: Electronics
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-11 SweetScape Software: Updated header for repository submission.
+//   1.0   2006-01-21 K Leitner: Initial version.
 //
 // Ref:		ATSC Digital Television standard (A/53), Revision D 
 //		Including Ammendment 1
 //		19 July 2005
 //		Data Organization (Sect 5.3) 		 		
-//----------------------------------------------------------------------------
+//------------------------------------------------
 // Setups for 010	View --> Width --> custom (832) to see segment synks
 //                      View --> Width --> custom  (64) to Field sync details
 // 

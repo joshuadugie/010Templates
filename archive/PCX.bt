@@ -1,11 +1,17 @@
-//------------------------------------
+//------------------------------------------------
 //--- 010 Editor v1.2 Binary Template
 //
-// Name: PCXTemplate.bt
-// Author: James Newton
-// Purpose: Sample template for PCX
-//     header information.
-//------------------------------------
+//      File: PCX.bt
+//   Authors: James Newton
+//   Version: 0.2
+//   Purpose: Parse a PCX bitmap header.
+//  Category: Image
+// File Mask: *.pcx
+//  ID Bytes: 0A [+1] 01
+//   History: 
+//   0.2   2016-01-28 SweetScape: Updated header for repository submission.
+//   0.1   JN: Initial release.
+//------------------------------------------------
 
 enum <ubyte> PCX_TYPE {
     v25         =0,     //Version 2.5 of PC Paintbrush 

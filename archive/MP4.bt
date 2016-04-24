@@ -1,12 +1,17 @@
-//-------------------------------------------------------------
+//------------------------------------------------
 //--- 010 Editor v6.0.2 Binary Template
 //
-// File:      MP4.bt
-// Author:    Marian Denes
-// Revision:  2.1
-// Date:      2015.06.04
-// Purpose:   Defines a template for parsing MP4 and MOV files.
-//-------------------------------------------------------------
+//      File: MP4.bt
+//   Authors: Marian Denes
+//   Version: 2.2
+//   Purpose: Defines a template for parsing MP4 and MOV video files.
+//  Category: Video
+// File Mask: *.mp4,*.mov,*.m4v
+//  ID Bytes: [+4] 66 74 79 70, [+4] 6D 6F 6F 76, [+4] 6D 64 61 74
+//   History: 
+//   2.2   2016-01-29 SweetScape: Updated header for repository submission.
+//   2.1   2015-06-04 M Denes: Public release.
+//------------------------------------------------
 
 BigEndian();
 

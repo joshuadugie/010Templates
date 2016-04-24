@@ -1,17 +1,21 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0 Binary Template
 //
-// File:	 BMGIFTemplate.bt
-// Author:   Berend-Jan "SkyLined" Wever
-// Revision: 1.1
-// Purpose:  Defines a template for
-//	parsing GIF image files.
-// SweetScape: Added bug fixes for
-//      reading global color table (May 2nd, 2007)
-// SweetScape: Added bug fixes for
-//      reading local color table and
-//      changed ReadShort to ReadUShort (Sept 25, 2007)
-//-----------------------------------
+//      File: GIF.bt
+//   Authors: Berend-Jan "SkyLined" Wever
+//   Version: 1.3
+//   Purpose: Defines a template for
+//	          parsing GIF image files.
+//  Category: Image
+// File Mask: *.gif
+//  ID Bytes: 47 49 46 //GIF 
+//   History: 
+//   1.3   2016-01-28 SweetScape: Updated header for repository submission.
+//   1.2   2007-09-25 SweetScape: Added bug fixes for reading local color table and
+//                                changed ReadShort to ReadUShort.
+//   1.1   2007-05-02 SweetScape: Added bug fixes for reading global color table.
+//   1.0   BJ Wever:  Initial release.
+//------------------------------------------------
 
 // From GIF89a Specification:
 

@@ -1,9 +1,19 @@
-//-----------------------------------
-// File:     Mifare Classic 1k
-// Author:   Ruben Boonen (b33f)
-//           http://www.fuzzysecurity.com/
-// Purpose:  Basic Structure
-//-----------------------------------
+//------------------------------------------------
+//--- 010 Editor Binary Template
+//
+//      File: Mifare1k.bt
+//   Authors: Ruben Boonen (b33f)
+//   Website: http://www.fuzzysecurity.com/
+//   Version: 1.1
+//   Purpose: Mifare Classic 1k Structure parsing.
+//            Commonly used in smart cards.
+//  Category: Electronics
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.0   R Boonen: Initial release.
+//------------------------------------------------
 
 struct FILE {
         struct Manufacturer_block {

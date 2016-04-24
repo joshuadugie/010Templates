@@ -1,31 +1,31 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v3.2.2 Binary Template
 //
-// File:     MachOTemplate.bt
-// Author:   Tim "diff" Strazzere <diff@lookout.com> <strazz@gmail.com>
-// Revision: 1.1
-// Purpose:  Quick template for parsing Macho-o binaries, pretty much fully working!
-//--------------------------------------
-//
-// Version 1.1
-//  - Minimum version load command now properly outputs the format for better readability
-//  - Added a readvalue function for the header, helps understand headers at a glance
-//
-// Version 1.0
-//  - Correctly parses FAT headers and will continue to parse the rest of the combined
-//    binary
-//  - Added many todo's to make the output more pretty
-//  - Fixed some broken LoadCommands (64bit ones mainly), will gracefully fail if unknown
-//    LoadCommand is hit
-//  - Found some bugs in 010Editor and added fixes to try to avoid those
-//
-// Version 0.1
-//  - First stab it this, lots of issues - FAT binaries don't work at all
+//      File: MachO.bt
+//   Authors: Tim "diff" Strazzere
+//    E-mail: diff@lookout.com, strazz@gmail.com
+//   Version: 1.2
+//   Purpose: Quick template for parsing Mach-o binaries,
+//            including Mac OS X executables, .o and .dylib files. 
+//  Category: Executable
+// File Mask: *,*.o,*.dylib
+//  ID Bytes: CF FA ED FE, CE FA ED FE, BE BA FE CA, CA FE BA BE
+//   History: 
+//   1.2   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.1   T Strazzere: - Minimum version load command now properly outputs the format for better readability
+//                      - Added a readvalue function for the header, helps understand headers at a glance 
+//   1.0   T Strazzere: - Correctly parses FAT headers and will continue to parse the rest of the combined
+//                        binary
+//                      - Added many todo's to make the output more pretty
+//                      - Fixed some broken LoadCommands (64bit ones mainly), will gracefully fail if unknown
+//                        LoadCommand is hit
+//                      - Found some bugs in 010Editor and added fixes to try to avoid those
+//   1.0   T Strazzere: - First stab it this, lots of issues - FAT binaries don't work at all
 //
 // Known issues:
 //  - Needs optimized structures otherwise anything of a decent size will kill it
 //    (Related to an 010Editor template bug)
-//
+//------------------------------------------------
 
 // Mach-o's should be Little Endian only -- except for the fat_header/fat_archLittleEndian();
 

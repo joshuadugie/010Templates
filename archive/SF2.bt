@@ -1,13 +1,22 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0 Binary Template
 //
-// File:     SF2Template.bt
-// Author:   gocha
-// Revision: 1.1
-// Purpose:  Defines a template for
-//    parsing SF2 (SoundFont 2.04) files.
-//    Tested with: Polyphone.
-//-----------------------------------
+//      File: SF2.bt
+//   Authors: gocha
+//   Version: 1.2
+//   Purpose: Defines a template for
+//            SF2 (SoundFont 2.04) files.
+//  Category: Audio
+// File Mask: *.sf2
+//  ID Bytes: 52 49 46 46 [+4] 73 66 62 6B //RIFF????sfbk
+//   History: 
+//   1.2   2016-03-07 gocha: - Update definition of every enum types
+//                           - Update the type of SFModulator::index for MIDI CC# modulator
+//   1.1   2016-02-22 SweetScape Software: Updated header for repository submission.
+//   1.0   2015-02-22 gocha: Initial release.
+//
+// Tested with: Polyphone.
+//------------------------------------------------
 
 typedef CHAR ID[4];
 

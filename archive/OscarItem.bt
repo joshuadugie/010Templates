@@ -1,12 +1,19 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v5.0.2 Binary Template
 //
-// File:    OscarItemTemplate.bt
-// Author:
-// Revision:1.0
-// Purpose: Template for binary journal 
-//  file used in AppleOne POS.
-//--------------------------------------
+//      File: OscarItem.bt
+//   Authors: S Reno
+//   Version: 1.1
+//   Purpose: Template for binary journal file used 
+//            in AppleOne POS. 
+//  Category: Electronics
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.0   S Reno: Initial release.
+//------------------------------------------------
+
 while( !FEof() ){
 	struct RECORD {
 		char type;

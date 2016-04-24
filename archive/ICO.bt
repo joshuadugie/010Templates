@@ -1,15 +1,21 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0 Binary Template
 //
-// File:     ICOTemplate.bt
-// Author:   Amotz Getzov
-// Revision: 1.0
-// Purpose:  Defines a template for
-//    parsing icon image files.
+//      File: ICO.bt
+//   Authors: Amotz Getzov
+//   Version: 1.1
+//   Purpose: Defines a template for
+//            parsing icon image files.
+//  Category: Image
+// File Mask: *.ico
+//  ID Bytes: 00 00 01 00
+//   History: 
+//   1.1   2016-01-28 SweetScape: Updated header for repository submission.
+//   1.0   A Getzov:  Initial release
 //
-// Based on BMPTemplate.bt from SweetScape Software
+// Based on BMP.bt from SweetScape Software
 // Does not support PMG icon images
-//-----------------------------------
+//------------------------------------------------
 
 typedef struct
 {

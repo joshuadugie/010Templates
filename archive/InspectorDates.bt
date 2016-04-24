@@ -1,15 +1,25 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v4.0 Binary Template
 //
-// File:     InspectorDates.bt
-// Author:   SweetScape Software
-// Revision: 1.0
-// Purpose:  Demonstrates how to add
-//  a series of date types to the 
-//  Inspector.bt file. Includes 
-//  WebkitTime, HFSTime, AppleTime, PRTime
-//  JavaTime, GPSTime, and BlackberryDate.
-//-----------------------------------
+//      File: InspectorDates.bt
+//   Authors: SweetScape Software
+//   Version: 1.1
+//   Purpose: Demonstrates how to add a series of 
+//            dates to the Auto Inspector. Includes:
+//            WebkitTime (64-bit int, microseconds since 01/01/1601),
+//            HFSTime (32-bit int, seconds since 01/01/1904),
+//            AppleTime (32-bit int, seconds since 01/01/2001),
+//            PRTime (64-bit int, microseconds since 01/01/1970),
+//            JavaTime (64-bit int, microseconds since 01/01/1970),
+//            GPSTime (32-bit int, seconds since 01/06/1980),
+//            BlackberryDate (32-bit int, minutes since 01/01/1900). 
+//  Category: Inspector
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.0   SweetScape Software: Initial release.
+//------------------------------------------------
 RequiresVersion( 4.0 );
 
 // Calculate the position for each variable,

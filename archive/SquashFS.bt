@@ -1,0 +1,91 @@
+//------------------------------------------------
+//--- 010 Editor v7.0 Binary Template
+//
+//      File: SquashFS.bt
+//   Authors: Drake Madison
+//   Version: 1.0
+//   Purpose: Parses the SquashFS compressed read-only file
+//            system for Linux. Currently supports only 3.x files.
+//  Category: Archive
+// File Mask: *.sqsh;*.squashfs
+//  ID Bytes: 68 73 71 73
+//   History: 
+//   1.0   2016-03-29 Drake Madison: Initial release
+//------------------------------------------------
+struct SQUASHFS_SUPER_BLOCK
+{
+    char   s_magic[4];
+    uint32 inodes;
+    uint32 bytes_used_2;
+    uint32 uid_start_2;
+    uint32 guid_start_2;
+    uint32 inode_table_start_2;
+    uint32 directory_table_start_2;
+    uint32 s_major:16;
+    uint32 s_minor:16;
+    uint32 block_size_1:16;
+    uint32 block_log:16;
+    ubyte  flags:8;
+    ubyte  no_uids:8;
+    ubyte  no_guids:8;
+    uint32 mkfs_time /* time of filesystem creation */;
+    uint64 root_inode;
+    uint32 block_size;
+    uint32 fragments;
+    uint32 fragment_table_start_2;
+    int64  bytes_used;
+    int64  uid_start;
+    int64  guid_start;
+    int64  inode_table_start;
+    int64  directory_table_start;
+    int64  fragment_table_start;
+    int64  lookup_table_start;
+};
+
+local uint32 sb_size_bytes = 119;
+
+// file starts with superblock
+SQUASHFS_SUPER_BLOCK sqsb;
+
+// verify header
+if (sqsb.s_magic != "hsqs")
+{
+    Warning( "File is not squashfs. Template stopped." );
+    return -1;
+}
+
+if (sqsb.s_major != 3)
+{
+    Warning( "Unsupported squashfile version" );
+    return -1;
+}
+
+// TODO: We could more fully define the internals of the File Data, Inode Table, and Directory Table
+//       by defining a 'compressed block' structure
+
+// Define File Data block
+ubyte file_data[sqsb.inode_table_start - sb_size_bytes];
+
+// Define Inode Table block
+ubyte inode_table[sqsb.directory_table_start - sqsb.inode_table_start];
+
+// Define Directory Table block (currently includes the Fragment Table)
+ubyte directory_table[sqsb.fragment_table_start - sqsb.directory_table_start];
+
+// Define Fragment Table Index
+int64 fragment_table_index[1 + (sqsb.fragments / 512)];
+
+// Define NFS Export Lookup Table
+if (sqsb.lookup_table_start != -1)
+{
+    ubyte export_table[sqsb.uid_start - sqsb.lookup_table_start];
+}
+
+// Define UID Table
+uint32 uid_table[sqsb.no_uids];
+
+// Define GID Table
+uint32 gid_table[sqsb.no_guids];
+
+// Remainder of the file is padding (out to 4KByte boundary)
+ubyte padding[4096 - (sqsb.bytes_used % 4096)];

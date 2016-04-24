@@ -1,17 +1,29 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0.2 Binary Template
 //
-// File: DMPTemplate.bt
-// Author: <a.schuster@yendor.net>
-// Revision: 1.0 - 20060320
-// Purpose: This template merely serves as documentation of the 
-//           memory dump format used by Microsoft's debuggers and 
-//          the NT kernel crashdump facility. Detailed and 
-//           authorative information about a DMP file can be 
-//          obtained by processing the file with the "dumpchk" 
-//          utility which ships whith Microsoft's free debugging 
-//          tools package.
-//--------------------------------------
+//      File: DMP.bt
+//   Authors: A Schuster
+//    E-mail: a.schuster@yendor.net
+//   Version: 1.1
+//   Purpose: Template to parse the header of a 
+//            Microsoft memory dump file (DMP) 
+//            as produced by the debugger and 
+//            kernel crashdump facility.
+//  Category: Operating System
+// File Mask: *.dmp
+//  ID Bytes: 4D 44 4D 50, 50 41 47 45 // MDMP, PAGE
+//   History: 
+//   1.1   2016-01-29 SweetScape: Updated header for repository submission.
+//   1.0   2006-03-20 A Schuster: Initial release.
+//
+// This template merely serves as documentation of the 
+// memory dump format used by Microsoft's debuggers and 
+// the NT kernel crashdump facility. Detailed and 
+// authorative information about a DMP file can be 
+// obtained by processing the file with the "dumpchk" 
+// utility which ships whith Microsoft's free debugging 
+// tools package.
+//------------------------------------------------
 
 
 typedef enum <uint32> {

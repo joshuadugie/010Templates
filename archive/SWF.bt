@@ -1,16 +1,24 @@
-/*************************************************************
- * 010 Editor v3.0 Binary Template
- *
- * File: SWFTemplate.bt
- * Author: Josh Zelonis <zelonis@gmail.com>
- * Revision: 1.2
- * Purpose: Defines a template for parsing SWF files based on
- * the file format specification for Flash 9. This is most
- * compatible with Actionscript 1 and 2 as the Actionscript
- * Byte Code has not been templated in.
- * Changes: 1.1 - Updated email address
- *          1.2 - Add code to check CWS file - TQN
- *************************************************************/
+//------------------------------------------------
+//--- 010 Editor v3.0 Binary Template
+//
+//      File: SWF.bt
+//   Authors: Josh Zelonis
+//    E-mail: zelonis@gmail.com
+//   Version: 1.3
+//   Purpose: Defines a template for parsing Adobe Flash SWF files 
+//            based on the file format specification for Flash 9.
+//  Category: Internet
+// File Mask: *.swf
+//  ID Bytes: 43 57 53, 46 57 53 //CWS, FWS
+//   History: 
+//   1.3   2016-01-30 SweetScape: Updated header for repository submission.
+//   1.2   TQN: Add code to check CWS file.
+//   1.1   J Zelonis: Updated email address.
+//   1.0   J Zelonis: Initial release.
+//
+// This is most compatible with Actionscript 1 and 2 as the Actionscript
+// Byte Code has not been templated in.
+//------------------------------------------------
 
 /***************
  * Action Tags *

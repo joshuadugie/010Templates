@@ -1,10 +1,18 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v5.0 Binary Template
 //
-// File:     CAPTemplate.bt
-// Author:   Agus Purwanto
-// Revision: 1.0
-// Purpose:  a template for parsing java card CAP file.
+//      File: CAP.bt
+//   Authors: Agus Purwanto
+//   Version: 1.1
+//   Purpose: Parse java card CAP file with bytecode 
+//            disassembler (Java Card 2.2.2 specs compliance). 
+//  Category: Programming
+// File Mask: *.cap
+//  ID Bytes: 50 4B
+//   History: 
+//   1.1   2016-01-29 SweetScape: Updated header for repository submission.
+//   1.0   A Purwanto: Initial release.
+//------------------------------------------------
 
 // Define structures used in CAP files
 

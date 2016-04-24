@@ -1,11 +1,19 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v6.0.1 Binary Template
 //
-// File: RegistryHive.bt
-// Author: Eric R. Zimmerman saericzimmerman@gmail.com
-// Revision: 1.2
-// Purpose: Parses Registry structures including Header, nk, vk, sk, and list records. Data node records are skipped
-//--------------------------------------
+//      File: RegistryHive.bt
+//   Authors: Eric R. Zimmerman
+//    E-mail: saericzimmerman@gmail.com
+//   Version: 1.3
+//   Purpose: Parses Windows Registry hive structures. Includes Header, 
+//            nk, vk, sk, and list records. Data node records are skipped.
+//  Category: Operating System
+// File Mask: *
+//  ID Bytes: 72 65 67 66 //regf
+//   History: 
+//   1.3   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.2   E Zimmerman: Public release.
+//------------------------------------------------
 
 LittleEndian();
 

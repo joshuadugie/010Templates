@@ -1,16 +1,20 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0 Binary Template
 //
-// File:    RARTemplate2.bt
-// Author:  Alexander Sherman
-// Purpose: Defines a template for
-//    parsing RAR files.
-// Revision: 7.03
-//-----------------------------------
-
-
+//      File: RAR.bt
+//   Authors: Alexander Sherman
+//   Version: 7.1
+//   Purpose: Parse RAR archives including 2.x, 3.x and SFX RAR files. 
+//  Category: Archive
+// File Mask: *.rar
+//  ID Bytes: 52 61 72 21 1A 07
+//   History: 
+//   7.1   2016-01-28 SweetScape: Updated header for repository submission.
+//   7.03  A Sherman: First public release.
+//
 // RAR archive structures
 // Based on TECHNOTE.TXT from the RAR archiver distribution
+//------------------------------------------------
 
 LittleEndian();
 

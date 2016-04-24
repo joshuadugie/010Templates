@@ -1,11 +1,17 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v4.0.4 Binary Template
 //
-// File:     OGGTemplate.bt
-// Author:   George Woods
-// Revision: 
-// Purpose:  Parses the ogg container format.
-//--------------------------------------
+//      File: OGG.bt
+//   Authors: George Woods
+//   Version: 1.1
+//   Purpose: Parses the ogg container format.
+//  Category: Audio
+// File Mask: *.ogg,*.oga,*.ogv,*.ogx
+//  ID Bytes: 4F 67 67 53 //OggS
+//   History: 
+//   1.1   2016-01-28 SweetScape: Updated header for repository submission.
+//   1.0   GS: Initial release.
+//------------------------------------------------
 
 // ogg files can be quite large. Don't read more the 1000 pages.
 local uint MAXPAGES = 1000;

@@ -1,18 +1,24 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0 Binary Template
 //
-// File:     ZIPTemplate.bt
-// Author:   SweetScape Software
-// Revision: 2.2
-// Purpose:  Defines a template for
-//    parsing ZIP files.
-// Changes:  
-// 2.1 (SweetScape): 
-//   - Added write function for ZIPFILERECORD structure.
-// 2.2 (S.Gibson, KPMG LLP): 
-//   - Fix for entry comment field
-//   - Fix for parsing data descriptors
-//-----------------------------------
+//      File: ZIP.bt
+//    Author: SweetScape Software
+//   Version: 2.3
+//   Purpose: Parse ZIP archive files.
+//  Category: Archive
+// File Mask: *.zip
+//  ID Bytes: 50 4B //PK
+//   History:  
+//   2.3   2015-07-18  SweetScape: Updated header for repository submission.
+//   2.2   S.Gibson:   Fix for entry comment field, 
+//                     Fix for parsing data descriptors
+//   2.1   SweetScape: Added write function for ZIPFILERECORD structure
+//   2.0   SweetScape: Added read functions
+//   1.0   SweetScape: Initial release
+//
+// More information available at:
+//  https://en.wikipedia.org/wiki/Zip_%28file_format%29
+//------------------------------------------------
 
 // Define structures used in ZIP files
 

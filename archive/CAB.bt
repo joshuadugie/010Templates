@@ -1,16 +1,21 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v3.2.2 Binary Template
 //
-// File: cabtemplate.bt
-// Author: Alex McDonnell
-// Revision: 0.1
-// Purpose: Parse Microsoft CAB files
-// Changes:  
-// 0.2 (SweetScape): 
-//   - Allow for multiple flags to be set at the same time
-//--------------------------------------
-
-// Define structures used in CAB files
+//      File: CAB.bt
+//   Authors: Alex McDonnell
+//   Version: 0.3
+//   Purpose: Template for Microsoft cabinet format files.
+//  Category: Archive
+// File Mask: *.cab
+//  ID Bytes: 4D 53 43 46 //MSCF
+//   History: 
+//   0.3   2016-01-27 SweetScape: Updated header for repository submission, added coloring for header, removed some warnings.
+//   0.2   SweetScape: Allow for multiple flags to be set at the same time.
+//   0.1   AM: Initial release.
+//
+// Format is described at:
+//  http://msdn.microsoft.com/en-us/library/bb417343.aspx. 
+//------------------------------------------------
 
 typedef struct {
 //header
@@ -54,7 +59,7 @@ typedef struct {
 } CFHEADER;
 
 LittleEndian();
-CFHEADER header;
+CFHEADER header <bgcolor=cLtGray>;
 local uint counter = 0;
 
 typedef struct {
@@ -63,7 +68,7 @@ typedef struct {
     ushort  cCFData;       /* number of CFDATA blocks in this folder */
     ushort  typeCompress;  /* compression type indicator */
 
-    if( exists(header.cbCFFolder))
+    if( exists(header.cbCFFolder) && (header.cbCFFolder > 0) )
         char abReserve[header.cbCFFolder];   /* (optional) per-folder reserved area */
 
 } CFFOLDER;
@@ -85,7 +90,7 @@ typedef struct {
   ushort    cbData;         /* number of compressed bytes in this block */
   ushort    cbUncomp;       /* number of uncompressed bytes in this block */
 
-  if( exists(header.cbCFData))
+  if( exists(header.cbCFData) && (header.cbCFData > 0) )
     char  abReserve[header.cbCFData];  /* (optional) per-datablock reserved area */
 
   char      ab[cbData];     /* compressed data bytes */

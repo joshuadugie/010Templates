@@ -1,11 +1,17 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v5.0 Binary Template
 //
-// File: ISOTemplate.bt
-// Author: Anton Kochkov
-// Revision: 0.1
-// Purpose: Show contents of the ISO headers
-//--------------------------------------
+//      File: ISO.bt
+//   Authors: Anton Kochkov
+//   Version: 0.2
+//   Purpose: Parse the file system headers for ISO disk images. 
+//  Category: Drives
+// File Mask: *.iso
+//  ID Bytes: 
+//   History: 
+//   0.2   2016-02-11 SweetScape Software: Updated header for repository submission.
+//   0.1   A Kochkov: Initial release.
+//------------------------------------------------
 
 BitfieldRightToLeft();
 BitfieldDisablePadding();

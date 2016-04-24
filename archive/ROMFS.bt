@@ -1,14 +1,22 @@
-//--------------------------------------
-//--- 010 Editor v5.0beta1 Binary Template
+//------------------------------------------------
+//--- 010 Editor v5.0 Binary Template
 //
-// File: ROMFS.bt
-// Author: Jordan Milne <jordan.milne-sw@saynotolinux.com>
-// Revision: v0.2
-// Purpose: Reverse engineering romfs images used in embedded devices
-//--------------------------------------
-
+//      File: ROMFS.bt
+//   Authors: Jordan Milne
+//    E-mail: jordan.milne-sw@saynotolinux.com
+//   Version: 0.3
+//   Purpose: Template for parsing and reverse engineering 
+//            RomFS images used in embedded devices.
+//  Category: Drives
+// File Mask: *
+//  ID Bytes: 2D 72 6F 6D 31 66 73 2D //-rom1fs-
+//   History: 
+//   0.3   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   0.2   J Milne: Initial release.
+//
 //test suite in hex format at https://github.com/chexum/genromfs/tree/master/selftest
 //format documentation at https://www.kernel.org/doc/Documentation/filesystems/romfs.txt
+//------------------------------------------------
 
 RequiresVersion(4, 0);
 

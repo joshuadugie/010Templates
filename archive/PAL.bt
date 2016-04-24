@@ -1,15 +1,18 @@
-//--------------------------------------
-//--- 010 Editor v2.0.2 Template File
+//------------------------------------------------
+//--- 010 Editor v2.0.2 Binary Template
 //
-// File:     PALTemplate.bt
-// Author:   SweetScape Software
-// Revision: 1.1
-// Purpose:  Parses a Microsoft PAL
-//     palette file.
-// SweetScape: Changed display order
-//  in ReadRGBQUAD to match the BMP 
-//  template (Oct 24th, 2007).
-//--------------------------------------
+//      File: PAL.bt
+//   Authors: SweetScape Software
+//   Version: 1.2
+//   Purpose: Parses a Microsoft PAL palette file.
+//  Category: Image
+// File Mask: *.pal
+//  ID Bytes: 52 49 46 46 [+4] 50 41 4C 20 //RIFF????PAL 
+//   History: 
+//   1.2   2016-01-29 SweetScape: Updated header for repository submission.
+//   1.1   2007-10-24 SweetScape: Changed display order in ReadRGBQUAD to match the BMP template.
+//   1.0   SweetScape: Initial release.
+//------------------------------------------------
 
 // Declare a structure for holding a color
 typedef struct 

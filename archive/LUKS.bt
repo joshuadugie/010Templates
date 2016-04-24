@@ -1,12 +1,19 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v4.0.1 Binary Template
 //
-// File:     LUKS.bt
-// Author:   Daniel Correa
-// URL:      http://www.sinfocol.org/
-// Revision: 1.0
-// Purpose:  Template for LUKS
-//--------------------------------------
+//      File: LUKS.bt
+//   Authors: Daniel Correa
+//   Website: http://www.sinfocol.org/
+//   Version: 1.1
+//   Purpose: Template for LUKS (Linux Unified 
+//            Key Setup) hard disk encryption.
+//  Category: Drives
+// File Mask: *
+//  ID Bytes: 4C 55 4B 53 BA BE //LUKS\xBA\xBE
+//   History: 
+//   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.0   D Correa: Initial release.
+//------------------------------------------------
 
 #define LUKS_CIPHERNAME_L 32
 #define LUKS_CIPHERMODE_L 32

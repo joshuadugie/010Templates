@@ -1,30 +1,38 @@
-//---------------------------------------------------------------------------
-/*
-	010 Editor Template for PDF file format
-	2010/08/06 v0.0.1
-
-	As the PDF file format is not your usual binary file format for which it is easy to create
-	010 templates, I had to resort to unusual template programming techniques.
-	Some limitations of the 010 scripting language (like not being able to create local structures)
-	also explain the unusual style.
-	Summary of the algorithm used by this template:
-		- search for keywords with FindAll (%PDF, %%EOF, obj, endobj): FindAllKeywords()
-		- merge all found keywords into one array, and filter out found keywords that are not actual
-		  PDF structures (like obj without preceding index and version): MergeAndFilterAllKeywords()
-		- loop over all keywords and prepare data needed to create PDF structures: PrepareStructures()
-		- create PDF structures: CreatePDFStructures()
-
-	Source code put in public domain by Didier Stevens, no Copyright
-	https://DidierStevens.com
-	Use at your own risk
-
-	History:
-		2010/08/03: start development with 010 Editor v3.0.6
-		2010/08/04: continue
-		2010/08/05: continue
-		2010/08/06: refactoring, cleanup
-*/
-//---------------------------------------------------------------------------
+//------------------------------------------------
+//--- 010 Editor Binary Template
+//
+//      File: PDF.bt
+//   Authors: Didier Stevens
+//   Version: 0.1
+//   Purpose: Template for Adobe PDF (Portable Document Format) files.
+//  Category: Document
+// File Mask: *.pdf
+//  ID Bytes: 25 50 44 46 //%PDF
+//   History: 
+//   0.1   2016-01-28 SweetScape: Updated header for repository submission.
+//   0.0.1 DS: First public release.
+//
+//	As the PDF file format is not your usual binary file format for which it is easy to create
+//	010 templates, I had to resort to unusual template programming techniques.
+//	Some limitations of the 010 scripting language (like not being able to create local structures)
+//	also explain the unusual style.
+//	Summary of the algorithm used by this template:
+//		- search for keywords with FindAll (%PDF, %%EOF, obj, endobj): FindAllKeywords()
+//		- merge all found keywords into one array, and filter out found keywords that are not actual
+//		  PDF structures (like obj without preceding index and version): MergeAndFilterAllKeywords()
+//		- loop over all keywords and prepare data needed to create PDF structures: PrepareStructures()
+//		- create PDF structures: CreatePDFStructures()
+//
+//	Source code put in public domain by Didier Stevens, no Copyright
+//	https://DidierStevens.com
+//	Use at your own risk
+//
+//	History:
+//		2010/08/03: start development with 010 Editor v3.0.6
+//		2010/08/04: continue
+//		2010/08/05: continue
+//		2010/08/06: refactoring, cleanup
+//------------------------------------------------
 
 local int iCOLOR = 0x95E8FF; // Color used for highlighting PDF structures
 

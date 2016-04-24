@@ -1,12 +1,18 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v3.0.4 Binary Template
 //
-// File: PYCTemplate.bt
-// Author: Kuang-che Wu
-// Revision: 2009/04/02
-// Purpose: parse python bytecode .pyc & .pyo
-// support python 2.4 to 2.7
-//--------------------------------------
+//      File: PYC.bt
+//   Authors: Kuang-che Wu
+//   Version: 1.1
+//   Purpose: Parse python bytecode .pyc and .pyo files, 
+//            support python 2.4 to 2.7. 
+//  Category: Programming
+// File Mask: *.pyc,*.pyo
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-02 SweetScape: Updated header for repository submission.
+//   1.0   2009-04-02 K Wu: Initial release.
+//------------------------------------------------
 
 enum <uint16> MagicValue {
 	PY_24a0 = 62041,

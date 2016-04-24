@@ -1,15 +1,21 @@
-//---------------------
+//------------------------------------------------
 //--- 010 Editor v3.0.3 Binary Template
 //
-// File: PCAPTemplate.bt
-// Author: Didier Stevens (https://DidierStevens.com)
-// Revision: 0.1, prototype, only tested on 1 PCAP file
-// Date: 2009/05/24
-// Purpose:  Defines a template for parsing PCAP files.
+//      File: PCAP.bt
+//   Authors: Didier Stevens
+//   Website: https://DidierStevens.com
+//   Version: 0.2
+//   Purpose: Parse a PCAP network capture file.
+//  Category: Network
+// File Mask: *.pcap
+//  ID Bytes: D4 C3 B2 A1
+//   History: 
+//   0.2   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   0.1   D Stevens: Initial release.
+//
 // References:
 //  http://wiki.wireshark.org/Development/LibpcapFileFormat
-//--------------------------------------
-
+//------------------------------------------------
 
 typedef struct {
         uint32 magic_number <format=hex>;   /* magic number */

@@ -1,12 +1,18 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0 Binary Template
 //
-// File:     RIFFTemplate.bt
-// Author:   gocha
-// Revision: 1.0
-// Purpose:  Defines a template for
-//    parsing generic RIFF files.
-//-----------------------------------
+//      File: RIFF.bt
+//   Authors: gocha
+//   Version: 1.1
+//   Purpose: Defines a template for
+//            generic RIFF files.
+//  Category: Misc
+// File Mask: 
+//  ID Bytes: 52 49 46 46 //RIFF
+//   History: 
+//   1.1   2016-02-22 SweetScape Software: Updated header for repository submission, added read function.
+//   1.0   2015-02-22 gocha: Initial release.
+//------------------------------------------------
 
 typedef CHAR ID[4];
 

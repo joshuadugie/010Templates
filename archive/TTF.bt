@@ -1,20 +1,25 @@
+//------------------------------------------------
 //--- 010 Editor v2.0 Binary Template
 //
-// File: TTFTemplate.bt
-// Author: James Newton of massmind.org
-// Revisions:
-// .1 reads the offsetTable
-// .2 reads some tables
-// .3 actually reads simple glyphs
-// .31 reads simple glyphs with the points in order
-// .32 reads simple glyphs with the points in CORRECT order
-// .4 added prep and DSIG tables
-//   - fixed serious bug with offset and length from wrong
-//     table being used in table structures.
-// .5 added GSUB and GPOS tables.
-// Purpose: Easy examination and editing
-//  of TTF binary data
-//--------------------------------------
+//      File: TTF.bt
+//   Authors: James Newton of massmind.org
+//   Version: 0.6
+//   Purpose: Template to parse TTF (TrueType) fonts.
+//  Category: Font
+// File Mask: *.ttf
+//  ID Bytes: 00 01 00 00 00
+//   History: 
+//   0.6   2016-01-28 SweetScape: Updated header for repository submission.
+//   0.5   JN: added GSUB and GPOS tables.
+//   0.4   JN: added prep and DSIG tables
+//             fixed serious bug with offset and length from wrong
+//             table being used in table structures.
+//   0.32  JN: reads simple glyphs with the points in CORRECT order
+//   0.31  JN: reads simple glyphs with the points in order
+//   0.3   JN: actually reads simple glyphs
+//   0.2   JN: reads some tables
+//   0.1   JN: reads the offsetTable
+//------------------------------------------------
 
 BigEndian();
 

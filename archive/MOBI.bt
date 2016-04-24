@@ -1,12 +1,18 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v4.0 Binary Template
 //
-// File:     MOBITemplate.bt
-// Author:   David W. Deley
-// Revision: 2.2
-// Purpose:  Defines a template for
-//    parsing MOBI ebook files.
-//-----------------------------------
+//      File: MOBI.bt
+//   Authors: David W. Deley
+//   Version: 2.3
+//   Purpose: Parse Amazon Kindle ebook mobipocket 
+//            file formats .mobi, .azw, .prc.
+//  Category: Document
+// File Mask: *.mobi,*.azw,*.prc
+//  ID Bytes: [+60]42 4F 4F 4B, [+60]54 45 58 74 //BOOK,TEXt
+//   History: 
+//   2.3   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   2.2   D Deley: Public release.
+//------------------------------------------------
 
 // Define structures used in MOBI files
 

@@ -1,13 +1,19 @@
-//---------------------------------------------------------------
+//------------------------------------------------
 //--- 010 Editor v3.2 Binary Template
 //
-// File: SSPTemplate.bt
-// Author: ThangCuAnh (TQN) - HVA
-// Revision: 0.1, prototypes
-// Date: 2010/10/09
-// Purpose: Define a template for parsing SmartSniff Packet file
+//      File: SSP.bt
+//   Authors: ThangCuAnh (TQN) - HVA
+//   Version: 0.2
+//   Purpose: Define a template for parsing SmartSniff Packet files. 
+//  Category: Network
+// File Mask: *.ssp
+//  ID Bytes: 53 4D 53 4E 46 32 30 30 //SMSNF200
+//   History: 
+//   0.2   2016-01-29 SweetScape: Updated header for repository submission.
+//   0.1   2010-10-09 TQN: Initial release.
+//
 // References: http://www.nirsoft.net/utils/smsniff.html
-//---------------------------------------------------------------
+//------------------------------------------------
 
 typedef BYTE IP_ADDRESS[4] <read = IP2Str>;
 typedef BYTE MAC_ADDRESS[6] <read = MAC2Str>;

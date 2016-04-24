@@ -1,12 +1,18 @@
-//-----------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0 Binary Template
 //
-// File:     Tacx Total Template.bt
-// Author:   Nestor Matas
-// Revision: 1.0
-// Purpose:  Defines a template for
-//    parsing All Tacx files PGMF CAF IMF RLV MRLV.
-//-----------------------------------
+//      File: Tacx.bt
+//   Authors: Nestor Matas
+//   Version: 1.1
+//   Purpose: Template for all the Tacx Fortius cycling training 
+//            software file formats, including pgmf, caf, imf, rlv and mrlv. 
+//  Category: Misc
+// File Mask: *.pgmf
+//  ID Bytes: A0 0F, B8 0B, D0 07, E8 03 //4000,3000,2000,1000
+//   History: 
+//   1.1   2016-02-11 SweetScape Software: Updated header for repository submission.
+//   1.0   N Matas: Initial release.
+//------------------------------------------------
 
 // Define structures used in Tacx files
 

@@ -1,12 +1,18 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v5.0.2 Binary Template
 //
-// File: AndroidManifestTemplate.bt
-// Author: dongmu
-// Revision: 1.0
-// Purpose: Define a template for parsing
-//          AndroidManifest.xml binary files.
-//--------------------------------------
+//      File: AndroidManifest.bt
+//   Authors: dongmu
+//   Version: 1.1
+//   Purpose: Define a template for parsing
+//            AndroidManifest.xml binary files.
+//  Category: Operating System
+// File Mask: AndroidManifest.xml
+//  ID Bytes: 03 00
+//   History: 
+//   1.1   2016-02-11 SweetScape Software: Updated header for repository submission.
+//   1.0   dongmu: Initial release.
+//------------------------------------------------
 
 // Define the structures used in a 
 // AndroidManifest.xml binary file 

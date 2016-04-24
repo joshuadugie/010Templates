@@ -1,12 +1,18 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v5.0 Binary Template
 //
-// File: VHD interpretation
-// Author: lurker0ster@gmail.com
-// Revision: V1.0
-// Purpose: Verify what I learn from Microsoft VHD specification.
-//--------------------------------------
-
+//      File: VHD.bt
+//   Authors: lurker0ster
+//    E-mail: lurker0ster@gmail.com
+//   Version: 1.1
+//   Purpose: Microsoft VHD virtual disk format parser. 
+//  Category: Drives
+// File Mask: *.vhd
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-02 SweetScape: Updated header for repository submission.
+//   1.0   lurker0ster: Verify what I learn from Microsoft VHD specification.
+//------------------------------------------------
 
 BigEndian();
 typedef uint64 ULONGLONG;

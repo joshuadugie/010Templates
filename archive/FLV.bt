@@ -1,12 +1,18 @@
-//-----------------------------------
-//--- 010 Editor v3.0 Binary Template
+//------------------------------------------------
+//--- 010 Editor v7.0dev1 Binary Template
 //
-// File:     FLVTemplate.bt
-// Author:   lafei(indep@263.net)
-// Revision: 2.1
-// Purpose:  Defines a template for
-//    parsing FLV files.
-//-----------------------------------
+//      File: FLV.bt
+//   Authors: lafei
+//    E-mail: indep@263.net
+//   Version: 2.2
+//   Purpose: Template for Flash Video (FLV) files. 
+//  Category: Video
+// File Mask: *.flv
+//  ID Bytes: 46 4C 56 //FLV
+//   History: 
+//   2.2   2016-01-29 SweetScape: Updated header for repository submission.
+//   2.1   lafei: Public release.
+//------------------------------------------------
 
 // Define structures used in FLV files
 

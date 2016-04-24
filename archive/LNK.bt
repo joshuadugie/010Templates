@@ -1,36 +1,43 @@
-//---------------------------------------------------------------------------
-/*
-	010 Editor Template for LNK file format
-	2010/08/11 v0.0.4
-
-	http://msdn.microsoft.com/en-us/library/dd871305%28PROT.10%29.aspx
-
-	Source code put in public domain by Didier Stevens, no Copyright
-	https://DidierStevens.com
-	Use at your own risk
-
-	History:
-		2010/07/23: start development with 010 Editor v3.0.6
-		2010/07/27: continue
-		2010/07/30: added CommonNetworkRelativeLink
-		2010/08/11: v0.0.4 added GUID processing to IDList
-
-	Todo:
-		Read functions for HotKeyFlags and NetworkProviderType
-		ExtraData structures for:
-			ConsoleDataBlock structure (section 2.5.1).
-			ConsoleFEDataBlock structure (section 2.5.2).
-			DarwinDataBlock structure (section 2.5.3).
-			EnvironmentVariableDataBlock structure (section 2.5.4).
-			IconEnvironmentDataBlock structure (section 2.5.5).
-			KnownFolderDataBlock structure (section 2.5.6).
-			PropertyStoreDataBlock structure (section 2.5.7).
-			ShimDataBlock structure (section 2.5.8).
-			SpecialFolderDataBlock structure (section 2.5.9).
-			VistaAndAboveIDListDataBlock structure (section 2.5.11).
-
-*/
-//---------------------------------------------------------------------------
+//------------------------------------------------
+//--- 010 Editor Binary Template
+//
+//      File: LNK.bt
+//   Authors: Didier Stevens
+//   Version: 0.1
+//   Purpose: View data in a Microsoft shortcut (LNK) file. 
+//  Category: Operating System
+// File Mask: *.lnk
+//  ID Bytes: 4C 00 00 00 01 14 02 00
+//   History: 
+//   0.1   2016-01-28 SweetScape: Updated header for repository submission, added read function for StringData.
+//   0.0.4 2010-08-11 D Stevens:  First public release.
+//
+//	http://msdn.microsoft.com/en-us/library/dd871305%28PROT.10%29.aspx
+//
+//	Source code put in public domain by Didier Stevens, no Copyright
+//	https://DidierStevens.com
+//	Use at your own risk
+//
+//	History:
+//		2010/07/23: start development with 010 Editor v3.0.6
+//		2010/07/27: continue
+//		2010/07/30: added CommonNetworkRelativeLink
+//		2010/08/11: v0.0.4 added GUID processing to IDList
+//
+//	Todo:
+//		Read functions for HotKeyFlags and NetworkProviderType
+//		ExtraData structures for:
+//			ConsoleDataBlock structure (section 2.5.1).
+//			ConsoleFEDataBlock structure (section 2.5.2).
+//			DarwinDataBlock structure (section 2.5.3).
+//			EnvironmentVariableDataBlock structure (section 2.5.4).
+//			IconEnvironmentDataBlock structure (section 2.5.5).
+//			KnownFolderDataBlock structure (section 2.5.6).
+//			PropertyStoreDataBlock structure (section 2.5.7).
+//			ShimDataBlock structure (section 2.5.8).
+//			SpecialFolderDataBlock structure (section 2.5.9).
+//			VistaAndAboveIDListDataBlock structure (section 2.5.11).
+//------------------------------------------------
 
 local int iCOLOR = 0x95E8FF;
 
@@ -332,8 +339,13 @@ typedef struct
 typedef struct
 {
 	WORD CountCharacters;
-	BYTE String[CountCharacters * 2];
-} StringData;
+	wchar_t String[CountCharacters];
+} StringData <read=ReadStringData>;
+
+wstring ReadStringData( StringData &sd )
+{
+    return sd.String;
+}
 
 typedef struct
 {

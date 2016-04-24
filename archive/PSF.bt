@@ -1,9 +1,17 @@
- //--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.0.2 Binary Template
 //
-// File:    WSUS PSF file format
-// Author:  Boris Mazic
-// Date:    31 August 2006
+//      File: PSF.bt
+//   Authors: Boris Mazic
+//   Version: 1.1
+//   Purpose: Parses a WSUS PSF (Patch Storage File) file. 
+//  Category: Operating System
+// File Mask: *.psf
+//  ID Bytes: 50 53 54 52 45 41 4D 00
+//   History: 
+//   1.1   2016-01-29 SweetScape: Updated header for repository submission.
+//   1.0   2006-08-31 B Mazic: Initial release.
+//
 // Abstract:
 // The sets of delta files for any given software update package are
 // stored in a patch storage file (PSF) that is hosted on an
@@ -21,12 +29,11 @@
 // installation downloads only the required set of delta files
 // necessary for that target computer, each installation will
 // download only a small fraction of the entire contents of a PSF.
-//--------------------------------------
 //
 // The name of a PSF file is in the format <SHA-1>.psf, where
 // <SHA-1> part is SHA-1 checksum calculated over the entire contents
 // of the PSF file.
-//
+//------------------------------------------------
 
 // Defines a PSF file header
 typedef struct {

@@ -1,16 +1,21 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v3.1.3 Binary Template
 //
-// File: DEXTemplate.bt
-// Author: Jon Larimer <jlarimer@gmail.com>
-// Revision: 1.0
-// Purpose: A template for analyzing Dalvik VM (Android) DEX files
+//      File: DEX.bt
+//   Authors: Jon Larimer
+//    E-mail: jlarimer@gmail.com
+//   Version: 1.1
+//   Purpose: A template for analyzing Dalvik VM 
+//            (Android) DEX files.
+//  Category: Operating System
+// File Mask: *.dex
+//  ID Bytes: 64 65 78 0A, 64 65 79 0A //dex\n,dey\n
+//   History: 
+//   1.1   2016-02-11 SweetScape Software: Updated header for repository submission.
+//   1.0   2011-05-10 J Larimer: Initial version.
 //
 // License: This file is released into the public domain. People may 
 //          use it for any purpose, commercial or otherwise. 
-//--------------------------------------
-
-// Version 1.0 (2011-05-10)
 //
 // KNOWN ISSUES:
 // - display of floats and doubles in encoded_value is incorrect
@@ -23,6 +28,7 @@
 //   referenced through other items in the header so adding them
 //   in the map_list would be reduntant
 // - colors?
+//------------------------------------------------
 
 LittleEndian();
 

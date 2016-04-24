@@ -1,13 +1,17 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v1.3.2 Binary Template
 //
-// File: MP3Template.bt
-// Author: Ivan Getta (ivanitto@ukr.net)
-// Purpose: MP3 files analysis and smart editing
-//
-// Template version: 1.0
-// Release date: 2005 Feb 18
-// Licence: free
+//      File: MP3.bt
+//   Authors: Ivan Getta
+//    E-mail: ivanitto@ukr.net
+//   Version: 1.1
+//   Purpose: Parse an MP3 music file. 
+//  Category: Audio
+// File Mask: *.mp3
+//  ID Bytes: 49 44 33, FF
+//   History: 
+//   1.1   2016-01-29 SweetScape: Updated header for repository submission.
+//   1.0   2005-02-18 I Getta: Initial release.
 //
 //--- Template features ----------------
 //
@@ -44,7 +48,7 @@
 //   4. "ID3 tag version 2.3.0 (Informal standard)"
 //          http://www.id3.org/id3v2.3.0.html
 //
-//--------------------------------------
+//------------------------------------------------
 
 
 local uint32 bitrate, frame_size, sampling_freq, frames_count = 0;

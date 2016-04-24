@@ -1,11 +1,18 @@
-//------------------------------------
+//------------------------------------------------
 //--- 010 Editor v1.0 Binary Template
 //
-// Name: CDATemplate.bt
-// Author: Szabolcs D�vid
-// Purpose: CDA template for Audio CD
-//     header Information
-//------------------------------------
+//      File: CDA.bt
+//   Authors: Szabolcs Dávid
+//   Version: 0.2
+//   Purpose: Simple CDA file template to read Audio CD header information.
+//  Category: Audio
+// File Mask: *.cda
+//  ID Bytes: 52 49 46 46 [+4] 43 44 44 41 //RIFF????CDDA
+//   History: 
+//   0.2   2016-01-29 SweetScape: Updated header for repository submission.
+//   0.1   S Dávid: Initial release.
+//------------------------------------------------
+
 typedef struct
 {
 	char szHeader[8];

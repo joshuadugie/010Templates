@@ -1,19 +1,29 @@
-//------------------------------------
+//------------------------------------------------
 //--- 010 Editor v1.2 Binary Template
 //
-// Author:  Sergey Evtushenko wildcar@mail.ru
-// Purpose: Display resources structure of a res file or PE file with Resources
-//          Info for the .rsrc section format in PE file was taken from http://msdn.microsoft.com/en-us/library/ms809762.aspx,
-//          but full understanding came after this https://forum.intern0t.org/security-tutorials-guides/4135-portable-executable-format-its-rsrc-section.html
-//          Info for RES file format was taken from http://msdn.microsoft.com/en-us/library/windows/desktop/ms648007(v=vs.85).aspx
-//          There is not all the pure truth but there is some info at least
-//          Additionally this template display the VersionInfo resource structure
-//          Info for this format was taken from http://msdn.microsoft.com/en-us/library/windows/desktop/ff468916(v=vs.85).aspx
-//          There is also not all the truth but there is some info at least
+//      File: RES.bt
+//   Authors: Sergey Evtushenko
+//    E-mail: wildcar@mail.ru
+//   Version: 1.1
+//   Purpose: Parses resources structure of a RES file or a PE file with the .rsrc section. 
+//  Category: Programming
+// File Mask: *.res
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.0   2014-07-29 S Evtushenko: Public release.
+//
+// Display resources structure of a res file or PE file with Resources
+// Info for the .rsrc section format in PE file was taken from http://msdn.microsoft.com/en-us/library/ms809762.aspx,
+// but full understanding came after this https://forum.intern0t.org/security-tutorials-guides/4135-portable-executable-format-its-rsrc-section.html
+// Info for RES file format was taken from http://msdn.microsoft.com/en-us/library/windows/desktop/ms648007(v=vs.85).aspx
+// There is not all the pure truth but there is some info at least
+// Additionally this template display the VersionInfo resource structure
+// Info for this format was taken from http://msdn.microsoft.com/en-us/library/windows/desktop/ff468916(v=vs.85).aspx
+// There is also not all the truth but there is some info at least
 // This template is using modified EXETemplate for skip right to rsrc section. Thanks to Blaine Lefebvre for it.
-// File mask: *.res, *.exe, *.dll
-// Date: 2014-07-29 
 // Place: Zaprudnya (sometimes Moscow), Russia
+//------------------------------------------------
 
 // Local global variables :)
 local int64 rsrc_va, rsrc_sa, rsrc_ea, res_level;
@@ -537,7 +547,7 @@ void RESfromRESDiscover()
             DWORD Version;
             DWORD Characteristics;
             char ResourceRAWData[DataSize];
-            if (TYPE==16)
+            if (NAME_type==16)
                 {
 				local int64 ba1, ba2;
                 ba2=FTell();

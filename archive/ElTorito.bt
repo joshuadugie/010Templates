@@ -1,3 +1,18 @@
+//------------------------------------------------
+//--- 010 Editor v7.0dev1 Binary Template
+//
+//      File: ElTorito.bt
+//   Authors: A Kochkov
+//   Version: 1.1
+//   Purpose: View the file system headers in an El Torito bootable cd image. 
+//  Category: Drives
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.0   A Kochkov: Initial release.
+//------------------------------------------------
+
 BitfieldRightToLeft();
 BitfieldDisablePadding();
 

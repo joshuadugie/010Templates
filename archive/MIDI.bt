@@ -1,6 +1,18 @@
-/* General-MIDI Parser 
- * By Jack Andersen
- */
+//------------------------------------------------
+//--- 010 Editor Binary Template
+//
+//      File: MIDI.bt
+//   Authors: Jack Andersen
+//   Version: 1.1
+//   Purpose: General MIDI sound file template. Complete with 
+//            delta-time and BPM evaluation into local variables. 
+//  Category: Audio
+// File Mask: *.mid
+//  ID Bytes: 4D 54 68 64 //MThd
+//   History: 
+//   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.0   J Andersen: Initial release.
+//------------------------------------------------
 
 BigEndian();
 

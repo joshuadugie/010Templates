@@ -1,18 +1,23 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.1 Binary Template
 //
-//    File: TIFTemplate.bt
-//  Author: Kevin O. Grover <kevin@kevingrover.net>
-// Purpose: A template for parsing TIFF (Tagged Image File Format) files.
-// Version: 1.6   2014-08-11
-// History:
-// 2005-05-09  KOG  Initial version
-// 2005-05-11  KOG  *Many* more TIFF Tag IDs (generated with a Perl script)
-// 2005-05-19  KOG  Added new iFax tags and best guess for MS Fax Tags
-// 2005-06-30  KOG  Updated MSFax Tag list
-// 2007-02-28  KOG  Updated for 010 2.1 (uses EnumToString)
-// 2012-09     ELB  add GeoTIFF rev 1.8.2
-// 2014-08-11  KOG  Merged in ELB's GeoTIFF (many tags), some cleanup
+//      File: TIF.bt
+//   Authors: Kevin O. Grover
+//    E-mail: kevin@kevingrover.net
+//   Version: 1.7
+//   Purpose: A template for parsing TIFF (Tagged Image File Format) files. Also now handles GeoTIFF files.
+//  Category: Image
+// File Mask: *.tif,*.tiff
+//  ID Bytes: 49 49 2A 00, 4D 4D 00 2A
+//   History: 
+//   1.7   2016-01-27 SweetScape: Updated header for repository submission.
+//   1.6   2014-08-11 KOG:  Merged in ELB's GeoTIFF (many tags), some cleanup
+//   1.5   2012-09    ELB:  add GeoTIFF rev 1.8.2
+//   1.4   2007-02-28 KOG:  Updated for 010 2.1 (uses EnumToString)
+//   1.3   2005-06-30 KOG:  Updated MSFax Tag list
+//   1.2   2005-05-19 KOG:  Added new iFax tags and best guess for MS Fax Tags
+//   1.1   2005-05-11 KOG:  *Many* more TIFF Tag IDs (generated with a Perl script)
+//   1.0   2005-05-09 KOG:  Initial version
 //
 // This template was written to the TIFF6 specification.  You can get
 // the TIFF documentation from Adobe (http://www.adobe.com) after
@@ -26,7 +31,7 @@
 //       registered as private and not reported anywhere.  If you run
 //       across any definitions, forward them to me and I'll add them
 //       to this template.
-//--------------------------------------
+//------------------------------------------------
 
 // Check the Byte Order Mark to determine if file is Little or Big Endian
 local uint16 tbom;

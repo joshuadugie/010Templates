@@ -1,11 +1,20 @@
-//--------------------------------------
+//------------------------------------------------
 //--- 010 Editor v2.1.4 Binary Template
 //
-// File:	TOCTemplate.bt
-// Author:	L. Potjewijd
-// Revision:	1.22
-// Purpose:	Eudora 7.1.0.9 mailbox .TOC files
-//--------------------------------------
+//      File: TOC.bt
+//   Authors: L. Potjewijd
+//   Version: 1.3
+//   Purpose: Template to make sense of, and modifications to, 
+//            Eudora 7.* (possible older versions too) 
+//            mailbox index files (.toc). 
+//  Category: Software
+// File Mask: *.toc
+//  ID Bytes: 
+//   History: 
+//   1.3   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.22  L Potjewijd: Public release.
+//------------------------------------------------
+
 enum <WORD> type   {In,Out,Junk,Trash,User,IMAP=8};
 enum <WORD> class  {user,system};
 enum <WORD> stat   {unread,read,replied,forwarded,redirected,rebuilt,sendable,queued,sent,unsent,timed,sending,recovered};

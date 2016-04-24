@@ -1,13 +1,20 @@
-
+//------------------------------------------------
+//--- 010 Editor v4.0.3d Binary Template
 //
-// 010 Editor v4.0.3d Binary Template
+//      File: RegistryPolicyFile.bt
+//   Authors: Blake Frantz
+//    E-mail: blakefrantz at gmail dot com
+//   Version: 1.1
+//   Purpose: Template for Windows registry policy files (registry.pol). 
+//  Category: Operating System
+// File Mask: registry.pol
+//  ID Bytes: 50 52 65 67
+//   History: 
+//   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
+//   1.0   2013-03-06 B Frantz: Initial version.
 //
-// File:     RegistryPolicyFileTemplate.bt
-// Author:   Blake Frantz (blakefrantz at gmail dot com)
-// Revision: 1.0, Last Updated on 6 Mar 2013.
-// Purpose:  Parse registry.pol files.
-//           See http://msdn.microsoft.com/en-us/library/windows/desktop/aa374407(v=vs.85).aspx
-//
+// See http://msdn.microsoft.com/en-us/library/windows/desktop/aa374407(v=vs.85).aspx
+//------------------------------------------------
 
 const DWORD REG_SZ = 1;
 const DWORD REG_EXPAND_SZ = 2;
