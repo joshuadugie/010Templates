@@ -3,13 +3,14 @@
 //
 //      File: MIDI.bt
 //   Authors: Jack Andersen
-//   Version: 1.1
+//   Version: 1.2
 //   Purpose: General MIDI sound file template. Complete with 
 //            delta-time and BPM evaluation into local variables. 
 //  Category: Audio
 // File Mask: *.mid
 //  ID Bytes: 4D 54 68 64 //MThd
 //   History: 
+//   1.2   2016-05-17 J Andersen: Correctly interpret unset status-bit as repeat message.
 //   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
 //   1.0   J Andersen: Initial release.
 //------------------------------------------------
@@ -57,12 +58,19 @@ struct DeltaTime
         break;
 };
 
+local char lastStatus = 0;
+
 struct MidiMessage
 {
     DeltaTime m_dtime;
     char m_status;
-    local char m_channel = m_status & 0xf;
-    if ((m_status & 0xf0) == 0x80) 
+    if (m_status & 0x80)
+        lastStatus = m_status;
+    else
+        FSeek(FTell()-1);
+    
+    local char m_channel = lastStatus & 0xf;
+    if ((lastStatus & 0xf0) == 0x80)
     {
         struct 
         {
@@ -70,7 +78,7 @@ struct MidiMessage
             char m_velocity;
         } note_off_event;
     }
-    else if ((m_status & 0xf0) == 0x90) 
+    else if ((lastStatus & 0xf0) == 0x90) 
     {
         struct 
         {
@@ -78,7 +86,7 @@ struct MidiMessage
             char m_velocity;
         } note_on_event;
     }
-    else if ((m_status & 0xf0) == 0xA0) 
+    else if ((lastStatus & 0xf0) == 0xA0) 
     {
         struct 
         {
@@ -86,7 +94,7 @@ struct MidiMessage
             char m_pressure;
         } note_pressure_event;
     }
-    else if ((m_status & 0xf0) == 0xB0) 
+    else if ((lastStatus & 0xf0) == 0xB0) 
     {
         struct 
         {
@@ -94,21 +102,21 @@ struct MidiMessage
             char m_value;
         } controller_event;
     }
-    else if ((m_status & 0xf0) == 0xC0) 
+    else if ((lastStatus & 0xf0) == 0xC0) 
     {
         struct 
         {
             char m_program;
         } program_event;
     }
-    else if ((m_status & 0xf0) == 0xD0) 
+    else if ((lastStatus & 0xf0) == 0xD0) 
     {
         struct 
         {
             char m_pressure;
         } channel_pressure_event;
     }
-    else if ((m_status & 0xf0) == 0xE0) 
+    else if ((lastStatus & 0xf0) == 0xE0) 
     {
         struct 
         {
@@ -116,7 +124,7 @@ struct MidiMessage
             char m_msb;
         } pitch_bend_event;
     }
-    else if (m_status == -1) 
+    else if (lastStatus == -1) 
     {
         struct 
         {
@@ -225,7 +233,7 @@ struct MidiMessage
             }
         } meta_event;
     }
-    else if ((m_status & 0xf0) == 0xF0) 
+    else if ((lastStatus & 0xf0) == 0xF0) 
     {
         struct 
         {

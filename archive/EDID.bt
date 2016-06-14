@@ -3,13 +3,14 @@
 //
 //      File: EDID.bt
 //   Authors: Rafael Vuijk
-//   Version: 1.1
+//   Version: 1.1.1
 //   Purpose: Template for EDID files (Extended 
 //            display identification data). 
 //  Category: Electronics
 // File Mask: edid.bin,*.edid
 //  ID Bytes: 00 FF FF FF FF FF FF 00
 //   History: 
+//   1.1.1 2016-06-14 SweetScape Software: Removed some invalid null characters.
 //   1.1   2016-02-11 SweetScape Software: Updated header for repository submission.
 //   1.0   2012-03-02 R Vuijk: Initial release.
 //
@@ -530,7 +531,7 @@ struct File
                     ubyte compositeSync : 1 <comment="Composite sync (on HSync) supported">;
                     ubyte separateSync : 1 <comment="Separate sync supported">;
                     ubyte blankToBlack : 1 <comment="Blank-to-black setup (pedestal) expected">;
-                    ubyte level : 2 <comment="Video white and sync levels, relative to blank: 00=+0.7/ 0.3 V; 01=+0.714/ 0.286 V; 10=+1.0/ 0.4 V; 11=+0.7/0 V">;
+                    ubyte level : 2 <comment="Video white and sync levels, relative to blank: 00=+0.7/0.3 V; 01=+0.714/0.286 V; 10=+1.0/0.4 V; 11=+0.7/0 V">;
                     ubyte analog : 1 <comment="0=Analog input">;
                 } analog;
             }

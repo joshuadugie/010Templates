@@ -2,13 +2,14 @@
 //--- 010 Editor Binary Template
 //
 //      File: PDF.bt
-//   Authors: Didier Stevens
-//   Version: 0.1
+//   Authors: Didier Stevens, Christian Mehlmauer
+//   Version: 0.2
 //   Purpose: Template for Adobe PDF (Portable Document Format) files.
 //  Category: Document
 // File Mask: *.pdf
 //  ID Bytes: 25 50 44 46 //%PDF
 //   History: 
+//   0.2   2016-05-19 Christian Mehlmauer: Parsing of XREFs
 //   0.1   2016-01-28 SweetScape: Updated header for repository submission.
 //   0.0.1 DS: First public release.
 //
@@ -105,12 +106,23 @@ typedef struct {
 
 local int iWhitespaceSize;
 typedef struct {
-	BYTE Whitespace[iWhitespaceSize];
+	BYTE Whitespace[iWhitespaceSize] <fgcolor=cLtGray>;
 } PDFWhitespace;
 
-local int iXrefSize;
-typedef struct {
-	BYTE Data[iXrefSize];
+typedef struct (int idLen, int countLen, int crlfLen) {
+    BYTE id[idLen];
+    char ws1 <hidden=true>;
+    CHAR count[countLen];
+    byte crlf[crlfLen] <hidden=true>;
+    struct {
+        iWhitespaceSize = 1;
+        BYTE offset[10];
+        PDFWhitespace w <hidden=true>;
+        BYTE generationNumber[5];
+        PDFWhitespace w <hidden=true>;
+        BYTE used;
+        byte crlf[2] <hidden=true>;
+    } PDFXrefItem[Atoi(count)];
 } PDFXref;
 
 // Functions
@@ -470,9 +482,14 @@ int StartsWith(int64 iStart, int iSize, string sData)
 void CreatePDFXref(int64 iStart, int iSize)
 {
 	iPDFXrefCount++;
-	FSeek(iStart);
-	iXrefSize = iSize;
-	PDFXref sPDFXref;
+    local char xRefLine[] = ReadLine(iStart);
+    local int64 nextStart = iStart + Strlen(xRefLine);
+    FSeek(nextStart);
+    local char l[] = ReadLine(nextStart, -1, 0);
+    local int idLen = Strstr(l, " ");
+    local int countLen = Strlen(l) - idLen - 1;
+    local int crlfLen = (Strlen(ReadLine(nextStart, -1, 1)) - Strlen(l));
+    PDFXref sPDFXref(idLen, countLen, crlfLen);
 }
 
 void CreatePDFObject(int64 iStart, int iSize, int iIndexLengthArg, int iWhiteSpace1LengthArg, int iVersionLengthArg, int iWhiteSpace2LengthArg, int iFoundEndobjArg, int iWhiteSpace3LengthArg)
