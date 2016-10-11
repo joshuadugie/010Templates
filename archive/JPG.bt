@@ -4,12 +4,13 @@
 //      File: JPG.bt
 //   Authors: Mor FTP
 //    E-mail: morftp AT hotmail DOT com
-//   Version: 1.4.1
+//   Version: 1.5
 //   Purpose: Template for JPG image files. 
 //  Category: Image
 // File Mask: *.jpg,*.jpeg
 //  ID Bytes: FF D8 FF
 //   History: 
+//   1.5   2016-01-28 Pergamon: Added Sof3 support and set padded bytes color to silver.
 //   1.4.1 2016-06-14 Bartosz Dziewonski: Don't fail when parsing IFD where the offset of data for
 //                    final entry is before the structure offset.
 //   1.4   2016-01-28 SweetScape: Updated header for repository submission, added open attribute.
@@ -1548,7 +1549,7 @@ typedef struct tgJPGFile {
 			ChangeColor(1);
 			M_ID EOIMarker;
 			Printf("End of File Image\n");
-			if(fpos2) char unknownPadding[fpos2];
+			if(fpos2) char unknownPadding[fpos2] <bgcolor=cSilver>;
 			bEOI = 1;
 			break;
 		case M_APP0:
@@ -1574,6 +1575,9 @@ typedef struct tgJPGFile {
 			break;
 		case M_SOF2:
 			SOFx sof2;
+			break;
+		case M_SOF3:
+			SOFx sof3;
 			break;
 		case M_APP1:
 			APP1 app1;

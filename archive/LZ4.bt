@@ -1,0 +1,115 @@
+//--------------------------------------
+//--- 010 Editor v5.0.2 Binary Template
+//
+//      File: LZ4.bt
+//   Authors: Hanno Hugenberg
+//    E-mail: hanno.hugenberg@pergamonmed.com
+//   Version: 0.1
+//   Purpose: Template for LZ4 Framing Format. 
+//  Category: Archive
+// File Mask: *.lz4,*.lz4f
+//  ID Bytes: 04 22 4D 18
+//   History: 
+//   0.1   2016-08-15 hh: Initial release
+//
+// This is a helper template for Yan Collet's lz4 frame format which stores lz4 compressed data in streamable data chunks
+// For more info see:
+//  lz4: http://fastcompression.blogspot.de/p/lz4.html
+//  frame format description: http://fastcompression.blogspot.de/2013/04/lz4-streaming-format-final.html
+//--------------------------------------
+
+//define structures here
+
+enum <UBYTE> LZ4F_Block_Max_Size{ bms64KB=4, bms256KB=5, bms1MB=6, bms4MB=7 };
+
+typedef struct  LZ4F_Header_Flags {
+        UBYTE PresetDictionary      : 1;      
+        UBYTE Reserved              : 1 <hidden=true>;
+        UBYTE ContentChecksum       : 1;
+        UBYTE ContentSize           : 1;
+        UBYTE BlockChecksum         : 1;
+        UBYTE BlockIndependence     : 1;
+        UBYTE Version               : 2;
+};
+
+typedef struct  LZ4F_Header_BlockDescriptor {
+        BitfieldDisablePadding();
+        UBYTE Reserved                          : 4 <hidden=true>;
+        LZ4F_Block_Max_Size BlockMaximumSize    : 3;
+        UBYTE Reserved                          : 1 <hidden=true>;
+};
+
+typedef struct LZ4F_Header {   // bmfh
+    UINT32  MagicNumber <format=hex, bgcolor=cRed>;
+    
+    union {
+        UBYTE Value;
+        UBYTE Bin <format=binary>;
+        LZ4F_Header_Flags FlagData;
+    } Flags ;
+
+    union {
+        UBYTE Value;
+        UBYTE Bin <format=binary>;
+        LZ4F_Header_BlockDescriptor Descriptor;
+    } BlockDescriptor ;
+    
+    if (Flags.FlagData.ContentSize > 0)
+        UINT64 ContentSize;
+
+    if (Flags.FlagData.PresetDictionary > 0)
+        UINT32 DictionaryID;    
+    
+    UBYTE   HeaderChecksum;
+};
+
+typedef struct LZ4F_Data_Block (LZ4F_Header &header)
+    {
+        BitfieldDisablePadding();
+        UINT32 DataSize     :31 <bgcolor=cLtGreen>;
+        UBYTE  Uncompressed :1  <bgcolor=cLtGreen>;
+        UBYTE  Data[DataSize]   <optimize=true, bgcolor=cLtBlue>;
+        if (header.Flags.FlagData.BlockChecksum > 0)
+          UINT32 BlockChecksum <bgcolor=cLtAqua>;
+    }; 
+
+typedef struct LZ4F_Skippable_Frame
+    {
+        BitfieldDisablePadding();
+        UINT32 MagicNumber  :32 <format=hex, bgcolor=cLtRed>;
+        UINT32 DataSize     :32 <bgcolor=cLtRed>;
+        UBYTE  Data[DataSize]   <optimize=true, bgcolor=cLtBlue>;
+    }; 
+
+//start parsing here
+
+//everything is in little endian
+LittleEndian();
+
+//check for file format
+local UINT32 MagicNumber = ReadUInt( 0 );
+
+//set header as purple color
+SetBackColor(cPurple);
+
+//check for magic numbers
+switch (MagicNumber)
+{
+    case 0x184D2204 : LZ4F_Header header; break; //current format
+    case 0x184C2102 : Warning( "Legacy Format currently not supported." );      return -1; break; //legacy  format
+    default         : Warning( "Unknown Format. Lz4 Identifier not found." );   return -1; break;
+};
+
+//highlight data blocks
+do{
+    switch (ReadUInt() & 0xFFFFFFF0)
+    {
+        //0x184D2A50 to 0x184D2A5F are all skippable custom data frames
+        case 0x184D2A50 : LZ4F_Skippable_Frame DataBlock();
+        //common lz4 compressed data blocks
+        default         : LZ4F_Data_Block DataBlock( header );
+    };
+} while( DataBlock.DataSize > 0);
+
+if ( header.Flags.FlagData.ContentChecksum )
+  UINT32 ContentChecksum;

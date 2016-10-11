@@ -3,17 +3,25 @@
 //
 //      File: SHP.bt
 //   Authors: A Norman
-//   Version: 1.1
+//   Version: 1.2
 //   Purpose: Parses ESRI shp files. 
 //  Category: GIS
 // File Mask: *.shp
 //  ID Bytes: 
 //   History: 
+//   1.2   2016-08-11 M. Nicke: Updated records for MultiPatchType
 //   1.1   2016-01-29 SweetScape: Updated header for repository submission, fixed reading records to the end of the file.
 //   1.0   A Norman: Initial release.
 //------------------------------------------------
 
 typedef struct point_s {double X; double Y;} POINT;
+typedef enum patchtype_e {
+            TriangleStrip = 0,
+            TriangleFan = 1,
+            OuterRing = 2,
+            InnerRing = 3,
+            FirstRing = 4,
+            Ring = 5} patchType;
 
 string GetByteSize(int wordSize)
 {
@@ -91,6 +99,21 @@ struct ESRI_SHAPE {
 			int	parts[numParts];
 			POINT	points[numPoints];
 		}
+		else if (shapeType == 31)
+        {
+            double  box[4];
+			int	numParts;
+			int	numPoints;
+			int	Parts[numParts];
+            patchType PartTypes[numParts];
+			POINT	points[numPoints];
+    		double	Zmin;
+	    	double	Zmax;
+            double  ZArray[numPoints];
+            double	Mmin;
+	    	double	Mmax;
+            double  MArray[numPoints];
+        }
 	};
 
     while( !FEof() )

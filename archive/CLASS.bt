@@ -4,12 +4,13 @@
 //      File: CLASS.bt
 //   Authors: Kevin O. Grover
 //    E-mail: kevin@kevingrover.net
-//   Version: 1.2
+//   Version: 1.3
 //   Purpose: Parse Java Class (JVM) files. 
 //  Category: Programming
 // File Mask: *.class
 //  ID Bytes: CA FE BA BE
 //   History: 
+//   1.3   2016-07-11 T. Strazzere: Add missing constant types
 //   1.2   2016-02-12 SweetScape Software: Updated header for repository submission.
 //   1.1   2014-08-13 kog: Updated for Java 7/8 Version number (and future)
 //   1.0   2007-02-26 kog: Original Version
@@ -89,6 +90,9 @@ typedef enum <u1> eCP_CONST {
     CONSTANT_Methodref =    10,
     CONSTANT_InterfaceMethodref =   11,
     CONSTANT_NameAndType =  12,
+    CONSTANT_MethodHandle_info = 15,
+    CONSTANT_MethodType = 16,
+    CONSTANT_InvokeDynamic = 18
 } CP_CONST;
 
 // Constant Pool Table Structure
@@ -128,6 +132,17 @@ typedef struct {
     case CONSTANT_NameAndType:
         u2 name_index;
         u2 descriptor_index;
+        break;
+    case CONSTANT_MethodHandle_info:
+        u1 reference_kind;
+        u2 reference_index;
+        break;
+    case CONSTANT_MethodType:
+        u2 descriptor_index;
+        break;
+    case CONSTANT_InvokeDynamic:
+        u2 bootstrap_method_attr_index;
+        u2 name_and_type_index;
         break;
     default:
         local string s;
