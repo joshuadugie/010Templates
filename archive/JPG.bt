@@ -4,12 +4,13 @@
 //      File: JPG.bt
 //   Authors: Mor FTP
 //    E-mail: morftp AT hotmail DOT com
-//   Version: 1.5
+//   Version: 1.6
 //   Purpose: Template for JPG image files. 
 //  Category: Image
 // File Mask: *.jpg,*.jpeg
 //  ID Bytes: FF D8 FF
 //   History: 
+//   1.6   2016-10-18 SweetScape: Handle when end of file marker is not found.
 //   1.5   2016-01-28 Pergamon: Added Sof3 support and set padded bytes color to silver.
 //   1.4.1 2016-06-14 Bartosz Dziewonski: Don't fail when parsing IFD where the offset of data for
 //                    final entry is before the structure offset.
@@ -1526,6 +1527,7 @@ typedef struct tgJPGFile {
 	BigEndian();
 	local WORD NextMarker;
 	local quad fpos2;
+    local quad endpos;
 	local byte bEOI = 0;
 	while(FTell() < JpegFileEnd && !bEOI) {
 		// skip optional 0xff before marker
@@ -1542,14 +1544,23 @@ typedef struct tgJPGFile {
 			Printf("Start of Scan Marker\n");
 			NextMarker = ReadUShort(JpegFileEnd - 2);
 			fpos2 = 0;
-			while(NextMarker != M_EOI) {
+            endpos = JpegFileEnd - FTell() - 2;
+			while(NextMarker != M_EOI && fpos2 < endpos ) {
 				NextMarker = ReadUShort(JpegFileEnd - 2 - (++fpos2));
-			}
-			char scanData[JpegFileEnd - FTell() - 2 - fpos2];
-			ChangeColor(1);
-			M_ID EOIMarker;
-			Printf("End of File Image\n");
-			if(fpos2) char unknownPadding[fpos2] <bgcolor=cSilver>;
+			} 
+            if( fpos2 == endpos )
+            {
+			    char unterminatedScanData[JpegFileEnd - FTell()];
+			    Printf("Missing End of File marker\n");
+            }
+            else
+            {
+			    char scanData[JpegFileEnd - FTell() - 2 - fpos2];
+			    ChangeColor(1);
+			    M_ID EOIMarker;
+			    Printf("End of File Image\n");
+			    if(fpos2) char unknownPadding[fpos2] <bgcolor=cSilver>;
+            }
 			bEOI = 1;
 			break;
 		case M_APP0:
