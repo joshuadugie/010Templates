@@ -4,12 +4,14 @@
 //      File: JPG.bt
 //   Authors: Mor FTP
 //    E-mail: morftp AT hotmail DOT com
-//   Version: 1.6
+//   Version: 1.6.1
 //   Purpose: Template for JPG image files. 
 //  Category: Image
 // File Mask: *.jpg,*.jpeg
 //  ID Bytes: FF D8 FF
 //   History: 
+//   1.6.1 2016-10-18 Bartosz Dziewonski: Don't fail when garbage bytes are present
+//                    between JPEG sections.
 //   1.6   2016-10-18 SweetScape: Handle when end of file marker is not found.
 //   1.5   2016-01-28 Pergamon: Added Sof3 support and set padded bytes color to silver.
 //   1.4.1 2016-06-14 Bartosz Dziewonski: Don't fail when parsing IFD where the offset of data for
@@ -1612,7 +1614,11 @@ typedef struct tgJPGFile {
             JPGLS jpgls;
             break;
 		default:
-			UNKNOWN unknownSection;
+			if (ReadUByte(FTell()) == 0xff) {
+				UNKNOWN unknownSection;
+			} else {
+				char garbage;
+			}
 			break;
 		}
 		ChangeColor(!bEOI);

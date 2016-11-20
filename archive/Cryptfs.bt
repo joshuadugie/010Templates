@@ -4,12 +4,13 @@
 //      File: Cryptfs.bt
 //   Authors: Tim 'diff' Strazzere
 //    E-mail: strazz@gmail.com
-//   Version: 1.1
+//   Version: 1.2
 //   Purpose: Parse the Cryptfs footer from encrypted drives (specifically Android)
 //  Category: Operating System
 // File Mask: *.bin
 //  ID Bytes: D0 B5 B1 C4
 //   History: 
+//   1.2  2016-10-19 TS: Fix expected structure for older formats, add expected buffer to end.
 //   1.1  2016-10-05 TS: Fix KDF enum
 //   1.0  2016-10-04 TS: First implementation of the template
 //------------------------------------------------
@@ -53,16 +54,21 @@ struct {
     uint32 persist_data_size;
 
     KDF_TYPE kdf_type;
-    ubyte N_factor;
-    ubyte r_factor;
-    ubyte p_factor;
-    uint64 encrypted_upto;
-    uchar hash_first_block[32];
+    if(kdf_type > KDF_SCRYPT) {
+        ubyte N_factor;
+        ubyte r_factor;
+        ubyte p_factor;
+        uint64 encrypted_upto;
+        uchar hash_first_block[32];
 
-    ubyte keymaster_blob[2048];
-    uint32 keymaster_blob_size;
+        ubyte keymaster_blob[2048];
+        uint32 keymaster_blob_size;
 
-    uchar scrypted_intermediate_key[32];
+        uchar scrypted_intermediate_key[32];
 
-    uchar sha256[32];
+        uchar sha256[32];
+    }
+    if(footer_size - FTell() > 0) {
+        ubyte unknown_exected_buffer[footer_size - FTell()];
+    }
 } crypt;
