@@ -3,18 +3,23 @@
 //
 //      File: CLASSAdv.bt
 //   Authors: Pishchik Ilya L. (RUS)
-//   Version: 1.1
+//   Version: 1.2
 //   Purpose: A template for parsing Java Class (JVM) Files.
 //            Includes visualizing bytecode.
 //  Category: Programming
 // File Mask: *.class
 //  ID Bytes: CA FE BA BE
-//   History: 
+//   History:
+//   1.2   2017-02-22 Jupiter: JDK 1.8 and 1.9 detection; link to JVM Specification from Java SE 8 Edition.
 //   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
 //   1.0   Pishchik Ilya: Initial release.
 //
-// You can get the document from the Java
-// Pages http://docs.oracle.com/javase/specs/jvms/se7/html/
+// More info in The Java Virtual Machine Specification:
+//   http://docs.oracle.com/javase/specs/jvms/se8/html/
+//
+// Current (JDK 1.9) version info defined in src/java.base/share/native/libjava/System.c:
+// #define JAVA_MAX_SUPPORTED_VERSION 53
+// #define JAVA_MAX_SUPPORTED_MINOR_VERSION 0
 //------------------------------------------------
 
 BigEndian();
@@ -1145,6 +1150,12 @@ string ClassFileOnComment(ClassFile &obj)
      break;
     case 51:
      return "JDK 1.7";
+     break;
+    case 52:
+     return "JDK 1.8";
+     break;
+    case 53:
+     return "JDK 1.9";
      break;
     default:
      return "JDK ?.?";

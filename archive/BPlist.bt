@@ -3,13 +3,14 @@
 //
 //      File: BPlist.bt
 //   Authors: Alexey Lyashko
-//   Version: 1.0
+//   Version: 1.0.1
 //   Purpose: Template for parsing Apple Binary Property List format.
 //  Category: Operating System
 // File Mask: *.plist
 //  ID Bytes: 62 70 6c 69 73 74 30 30  //bplist00
 //   History: 
-//      1.0     2017-01-18  A. Lyashko:  Initial release.
+//   1.0.1   2017-01-23  A. Lyashko:  Fixed bug with sign extension in read_offset function.
+//   1.0     2017-01-18  A. Lyashko:  Initial release.
 //------------------------------------------------
 
 // plist00 format is big endian...
@@ -564,10 +565,13 @@ string    read_offset(int idx)
     switch(bpfile.sizeOfInteger)
     {
         case 1:
-            r = (int)ReadByte(bpfile.offsetTableOffset + idx);
+            r = (int)ReadByte(bpfile.offsetTableOffset + idx) & 0x000000ff;
             break;
         case 2:
-            r = (int)ReadShort(bpfile.offsetTableOffset + idx * 2);
+            r = (int)ReadShort(bpfile.offsetTableOffset + idx * 2) & 0x0000ffff;
+            break;
+        case 4:
+            r = (int)ReadInt(bpfile.offsetTableOffset + idx * 4);
             break;
         default:
             r = 0xdefec8ed;

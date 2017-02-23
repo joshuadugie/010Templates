@@ -3,13 +3,16 @@
 //
 //      File: EMF.bt
 //   Authors: Dustin D. Trammell
+//    Contr.: Alex McDonnell
 //    E-mail: dtrammell@dustintrammell.com
-//   Version: 0.2
+//   Version: 0.3
 //   Purpose: Enhanced Metafile Format (EMF) template. 
 //  Category: Image
 // File Mask: *.emf
 //  ID Bytes: 01 00 00 00
 //   History: 
+//   0.3   2017-02/07 AM: Fixed record types that had a size of 8 from creating a warning.
+//                    AM: Removed extra record loop that erroneously added an extra record to every file.
 //   0.2   2016-01-29 SweetScape: Updated header for repository submission.
 //   0.1   2008-04-08 D Trammell: Initial version.
 //
@@ -184,7 +187,9 @@ typedef struct {
 typedef struct {
   RecordType	iType;              // Record type EMR_XXX
   DWORD		nSize;              // Record size in bytes
-  DWORD		dParm[((nSize-8)/4)];   // DWORD Array of parameters
+  if(nSize > 8){
+    DWORD		dParm[((nSize-8)/4)];   // DWORD Array of parameters
+  }
 } Record;
 
 typedef struct {
@@ -213,12 +218,6 @@ local int recCnt = 0;
 for( recCnt = 0; recCnt < header.nRecords - 1; recCnt++ ) {
   Record record;
 }
-// If the last record wasn't EMR_EOF, there should be more records
-// even though they exceed the count in the header
-do {
-  Record extrarecord;
-  recCnt++;
-} while( record[recCnt-1].iType != EMR_EOF);
 
 // Check last record or header for presence of Palette
 local int palCnt = 0;
