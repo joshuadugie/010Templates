@@ -3,15 +3,18 @@
 //
 //      File: EMF.bt
 //   Authors: Dustin D. Trammell
-//    Contr.: Alex McDonnell
 //    E-mail: dtrammell@dustintrammell.com
-//   Version: 0.3
+//    Contr.: Alex McDonnell
+//    Contr.: Harli Aquino <maharlito.aquino@cyren.com>
+//   Version: 0.4
 //   Purpose: Enhanced Metafile Format (EMF) template. 
 //  Category: Image
 // File Mask: *.emf
 //  ID Bytes: 01 00 00 00
 //   History: 
-//   0.3   2017-02/07 AM: Fixed record types that had a size of 8 from creating a warning.
+//   0.4   2017-03-08 Harli : Added code to show details of SETDIBITSTODEVICE structure the EMF Record parser
+//                    Harli : Added condition to only show the optional description if offDescription is not 0x00
+//   0.3   2017-02-07 AM: Fixed record types that had a size of 8 from creating a warning.
 //                    AM: Removed extra record loop that erroneously added an extra record to every file.
 //   0.2   2016-01-29 SweetScape: Updated header for repository submission.
 //   0.1   2008-04-08 D Trammell: Initial version.
@@ -184,11 +187,74 @@ typedef struct {
   WORD desc[header.nDescription];
 } Description;
 
+// Harli : 3/8/2017 1:16:26
+// https://msdn.microsoft.com/en-us/library/windows/desktop/dd162938(v=vs.85).aspx
+typedef struct tagRGBQUAD {
+  BYTE rgbBlue;
+  BYTE rgbGreen;
+  BYTE rgbRed;
+  BYTE rgbReserved;
+} RGBQUAD;
+
+// Harli : 3/8/2017 1:16:26
+// https://msdn.microsoft.com/en-us/library/windows/desktop/dd183375(v=vs.85).aspx
+typedef struct tagBITMAPINFOHEADER {
+  DWORD biSize;
+  LONG  biWidth;
+  LONG  biHeight;
+  WORD  biPlanes;
+  WORD  biBitCount;
+  DWORD biCompression;
+  DWORD biSizeImage;
+  LONG  biXPelsPerMeter;
+  LONG  biYPelsPerMeter;
+  DWORD biClrUsed;
+  DWORD biClrImportant;
+} BITMAPINFOHEADER;
+
+// Harli : 3/8/2017 1:16:26
+// https://msdn.microsoft.com/en-us/library/windows/desktop/dd183376(v=vs.85).aspx
+typedef struct tagBITMAPINFO {
+  BITMAPINFOHEADER bmiHeader;
+  RGBQUAD          bmiColors[1];
+} BITMAPINFO;
+
+// Harli : 3/8/2017 1:16:26
+// https://msdn.microsoft.com/en-us/library/cc230685.aspx
 typedef struct {
-  RecordType	iType;              // Record type EMR_XXX
-  DWORD		nSize;              // Record size in bytes
-  if(nSize > 8){
-    DWORD		dParm[((nSize-8)/4)];   // DWORD Array of parameters
+    local int EMROffset = FTell();
+    FSeek(EMROffset);
+    RecordType	iType;                  // Record type EMR_XXX
+    DWORD		nSize;                      // Record size in bytes
+    RECTL Bounds;
+    DWORD xDest;
+    DWORD yDest;
+    DWORD xSrc;
+    DWORD ySrc;
+    DWORD cxSrc;
+    DWORD cySrc;
+    DWORD offBmiSrc;
+    DWORD cbBmiSrc;
+    DWORD offBitsSrc;
+    DWORD cbBitsSrc;
+    DWORD UsageSrc;
+    DWORD iStartScan;
+    DWORD cScans;
+    FSeek(EMROffset+offBmiSrc);
+    BITMAPINFO BitMapInfo;
+} EMR_SETDIBITSTODEVICE;
+
+typedef struct {
+  local int _iType = ReadUInt(FTell());
+  if (_iType == 0x00000050){           // Harli : 3/8/2017 1:16:26
+    EMR_SETDIBITSTODEVICE EMR_SETDIBITSTODEVICE_Record;
+  }
+  else {
+    RecordType	iType;                  // Record type EMR_XXX
+    DWORD		nSize;                      // Record size in bytes
+    if(nSize > 8){
+        DWORD		dParm[((nSize-8)/4)];   // DWORD Array of parameters
+    }
   }
 } Record;
 
@@ -207,8 +273,10 @@ LittleEndian();
 Header header;
 
 // Optional Description
+if (header.offDescription){ // Harli : 3/8/2017 1:16:26
 FSeek(header.offDescription);
 Description description;
+}
 
 // Start of Records (after header)
 FSeek(header.nSize);
