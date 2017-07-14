@@ -4,12 +4,13 @@
 //      File: CLASS.bt
 //   Authors: Kevin O. Grover
 //    E-mail: kevin@kevingrover.net
-//   Version: 1.3
+//   Version: 1.4
 //   Purpose: Parse Java Class (JVM) files. 
 //  Category: Programming
 // File Mask: *.class
 //  ID Bytes: CA FE BA BE
 //   History: 
+//   1.4   2017-05-16 DO: Skip next constant after CONSTANT_Long or CONSTANT_Double as per spec.
 //   1.3   2016-07-11 T. Strazzere: Add missing constant types
 //   1.2   2016-02-12 SweetScape Software: Updated header for repository submission.
 //   1.1   2014-08-13 kog: Updated for Java 7/8 Version number (and future)
@@ -95,60 +96,72 @@ typedef enum <u1> eCP_CONST {
     CONSTANT_InvokeDynamic = 18
 } CP_CONST;
 
+// Variable to zero the size of the next cp_info (see below).
+// https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.5
+local int ignoreNextIndex = 0;
+
 // Constant Pool Table Structure
 // NOTE: These are NOT constant sized items.  Although referenced
 //       like an array in the main structure, you can not use position
 //       to directly infer a byte offset because you do not know the
 //       sizes of the items preceeding it.
 typedef struct {
-    CP_CONST  tag;
-    switch(tag)
-    {
-    case CONSTANT_Class:
-        u2 name_index;
-        break;
-    case CONSTANT_Methodref:
-    case CONSTANT_Fieldref:
-    case CONSTANT_InterfaceMethodref:
-        u2 class_index;
-        u2 name_and_type_index;
-        break;
-    case CONSTANT_Utf8:
-        u2 length;
-        char bytes[length];
-        break;
-    case CONSTANT_Integer:
-    case CONSTANT_Float:
-        u4 bytes;
-        break;
-    case CONSTANT_Long:
-    case CONSTANT_Double:
-        u4 high_bytes;
-        u4 low_bytes;
-        break;
-    case CONSTANT_String:
-        u2 string_index;
-        break;
-    case CONSTANT_NameAndType:
-        u2 name_index;
-        u2 descriptor_index;
-        break;
-    case CONSTANT_MethodHandle_info:
-        u1 reference_kind;
-        u2 reference_index;
-        break;
-    case CONSTANT_MethodType:
-        u2 descriptor_index;
-        break;
-    case CONSTANT_InvokeDynamic:
-        u2 bootstrap_method_attr_index;
-        u2 name_and_type_index;
-        break;
-    default:
-        local string s;
-        SPrintf(s, "Unknown 'constant_pool' tag: %d", tag);
-        Warning(s);
-        return -3;
+    if(ignoreNextIndex == 0) {
+        CP_CONST  tag;
+        switch(tag)
+        {
+        case CONSTANT_Class:
+            u2 name_index;
+            break;
+        case CONSTANT_Methodref:
+        case CONSTANT_Fieldref:
+        case CONSTANT_InterfaceMethodref:
+            u2 class_index;
+            u2 name_and_type_index;
+            break;
+        case CONSTANT_Utf8:
+            u2 length;
+            if(length > 0) {
+                char bytes[length];
+            }
+            break;
+        case CONSTANT_Integer:
+        case CONSTANT_Float:
+            u4 bytes;
+            break;
+        case CONSTANT_Long:
+        case CONSTANT_Double:
+            u4 high_bytes;
+            u4 low_bytes;
+            // Ignore the next cp_info entry by making it empty.
+            ignoreNextIndex = 1;
+            break;
+        case CONSTANT_String:
+            u2 string_index;
+            break;
+        case CONSTANT_NameAndType:
+            u2 name_index;
+            u2 descriptor_index;
+            break;
+        case CONSTANT_MethodHandle_info:
+            u1 reference_kind;
+            u2 reference_index;
+            break;
+        case CONSTANT_MethodType:
+            u2 descriptor_index;
+            break;
+        case CONSTANT_InvokeDynamic:
+            u2 bootstrap_method_attr_index;
+            u2 name_and_type_index;
+            break;
+        default:
+            local string s;
+            SPrintf(s, "Unknown 'constant_pool' tag: %d", tag);
+            Warning(s);
+            return -3;
+        }
+    } else {
+        ignoreNextIndex = 0;
     }
 } cp_info <read=read_cp_info, optimize=false>;
 
@@ -160,7 +173,7 @@ string read_cp_info (local cp_info &i)
 {
     local string s = "";
     s = EnumToString(i.tag);
-    if (i.tag == CONSTANT_Utf8) {
+    if (i.tag == CONSTANT_Utf8 && i.length > 0) {
         s += ": " + i.bytes;
     }
     return s;
