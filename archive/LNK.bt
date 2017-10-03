@@ -3,12 +3,13 @@
 //
 //      File: LNK.bt
 //   Authors: Didier Stevens, Trevor Welsby
-//   Version: 0.2
+//   Version: 0.3
 //   Purpose: View data in a Microsoft shortcut (LNK) file. 
 //  Category: Operating System
 // File Mask: *.lnk
-//  ID bytes: 4C 00 00 00 01 14 02 00
+//  ID Bytes: 4C 00 00 00 01 14 02 00
 //   History: 
+//   0.3   2017-09-12 SweetScape: Fixed errors if strings or attributes were empty.
 //   0.2   2017-02-26 T Welsby: Significant updates per history
 //   0.1   2016-01-28 SweetScape: Updated header for repository submission, added read function for StringData.
 //   0.0.4 2010-08-11 D Stevens:  First public release.
@@ -145,6 +146,7 @@ string ReadFileAttributes(FileAttributes &attr)
     if (attr.FILE_ATTRIBUTE_VIRTUAL) res+= "FILE_ATTRIBUTE_VIRTUAL | ";
     if (attr.FILE_ATTRIBUTE_NO_SCRUB_DATA) res += "FILE_ATTRIBUTE_NO_SCRUB_DATA | ";
     if (Strlen(res)) return StrDel(res,Strlen(res)-3,3);
+    return "";
 }
 
 typedef struct
@@ -651,12 +653,16 @@ typedef struct
 typedef struct
 {
 	uint16 CountCharacters;
-	wchar_t String[CountCharacters];
+    if( CountCharacters > 0 )
+    	wchar_t String[CountCharacters];
 } StringData <read=ReadStringData>;
 
 wstring ReadStringData( StringData &sd )
 {
-    return sd.String;
+    if( sd.CountCharacters > 0 )
+        return sd.String;
+    else
+        return "";
 }
 
 typedef struct

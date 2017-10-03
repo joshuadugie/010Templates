@@ -3,18 +3,23 @@
 //
 //      File: DDS.bt
 //   Authors: Aaron Cooper
-//   Version: 1.0
+//    E-mail: aaron@kingcoopa.com
+//   Version: 1.1
 //   Purpose: Parse DDS images
 //  Category: Image
 // File Mask: *.dds
 //  ID Bytes: 44 44 53 20
-//   History: 
-//   1.0   2017-07-11 Aaron Cooper: Initial release
+//   History:
+//   1.1   2017-07-12 Aaron Cooper: Added pixel format flags formatting.
+//   1.0   2017-07-11 Aaron Cooper: Initial release.
+//
+// More information available at
+//  https://msdn.microsoft.com/en-us/library/windows/desktop/bb943991(v=vs.85).aspx
 //------------------------------------------------
 
 struct DDS_PIXELFORMAT {
     uint size;
-    uint flags <format=binary>;
+    uint flags <format=binary, read=ReadDDSPixelFormatFlags>;
     char fourCC[4];
     uint RGBBitCount;
     uint RBitMask <format=binary>;
@@ -29,7 +34,7 @@ typedef uint D3D10_RESOURCE_DIMENSION <read=ReadD3D10ResourceDimension>;
 char magic[4];
 struct DDS_HEADER {
     uint size;
-    int flags <format=binary, read=ReadHeaderFlags>;
+    uint flags <format=binary, read=ReadHeaderFlags>;
     uint height;
     uint width;
     uint pitchOrLinearSize;
@@ -377,6 +382,70 @@ string ReadHeaderFlags(uint flags)
             break;
         case 0x800000:
             value += "DDSD_DEPTH";
+            break;
+        }
+
+        if(flag != 0)
+        {
+            flagCounter++;
+            if(flagCounter < flagsFound)
+            {
+                value += " | ";
+            }
+        }
+    }
+
+    return value;
+}
+
+string ReadDDSPixelFormatFlags(uint flags)
+{
+    string value = "";
+
+    if(flags == 0)
+    {
+        return "";
+    }
+
+    int i = 0;
+    int flag = 0;
+
+    int flagsFound = 0;
+
+    for(i = 0; i < 32; i++)
+    {
+        flag = flags & (1 << i);
+
+        if(flag != 0)
+        {
+            flagsFound++;
+        }
+    }
+
+    int flagCounter = 0;
+    for(i = 0; i < 32; i++)
+    {
+        flag = flags & (1 << i);
+
+        switch(flag)
+        {
+        case 0x1:
+            value += "DDPF_ALPHAPIXELS";
+            break;
+        case 0x2:
+            value += "DDPF_ALPHA";
+            break;
+        case 0x4:
+            value += "DDPF_FOURCC";
+            break;
+        case 0x40:
+            value += "DDPF_RGB";
+            break;
+        case 0x200:
+            value += "DDPF_YUV";
+            break;
+        case 0x20000:
+            value += "DDPF_LUMINANCE";
             break;
         }
 

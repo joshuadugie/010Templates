@@ -4,12 +4,13 @@
 //      File: TIF.bt
 //   Authors: Kevin O. Grover
 //    E-mail: kevin@kevingrover.net
-//   Version: 1.7
-//   Purpose: A template for parsing TIFF (Tagged Image File Format) files. Also now handles GeoTIFF files.
+//   Version: 1.8
+//   Purpose: Parse TIFF (Tagged Image File Format) files, including GeoTIFF.
 //  Category: Image
 // File Mask: *.tif,*.tiff
 //  ID Bytes: 49 49 2A 00, 4D 4D 00 2A
-//   History: 
+//   History:
+//   1.8   2017-08-17 KOG:  Fixed typos in tag names
 //   1.7   2016-01-27 SweetScape: Updated header for repository submission.
 //   1.6   2014-08-11 KOG:  Merged in ELB's GeoTIFF (many tags), some cleanup
 //   1.5   2012-09    ELB:  add GeoTIFF rev 1.8.2
@@ -36,7 +37,7 @@
 // Check the Byte Order Mark to determine if file is Little or Big Endian
 local uint16 tbom;
 tbom = ReadUShort(0);
-if      (tbom == 0x4949) {
+if (tbom == 0x4949) {
     LittleEndian();
 }
 else if (tbom == 0x4D4D) {
@@ -49,6 +50,7 @@ else {
 
 local quad nextIFD = 0;                // Pointer to next IFD (or 0)
 
+// START:TIFF_Tags.txt
 // DO NOT EDIT. This structure is generated from TIFF_Tags.pl
 // enum of TAG ids
 typedef enum <uint16> eTAG {
@@ -88,13 +90,13 @@ typedef enum <uint16> eTAG {
     InterColourProfile=34675,
     GeoKeyDirectoryTag=34735,GeoDoubleParamsTag,GeoAsciiParamsTag,
     ExposureProgram=34850,
-    SpectralSensitibity=34852,GPSInfo,
+    SpectralSensitivity=34852,GPSInfo,
     ISOSpeedRatings=34855,OECF,Interlace,TimeZoneOffset,SelfTimerMode,
     FaxRecvParams=34908,FaxSubAddress,FaxRecvTime,
     ExifVersion=36864,
     DateTimeOriginal=36867,DateTimeDigitized,
     ComponentsConfiguration=37121,CompressedBitsPerPixel,
-    ShutterSpeedValue=37377,ApertureValue,BrightnessValue,ExposureBiasValue,MaxApertureValue,SubjectDistance,MeteringMode,LightSource,Flash,FocalLength,FlashEnergy,SpatialFrequencyResponse,Noise,FocalPlaneXResolution,FocalPlaneYResolution,FocalPlaneResolutionUnit,ImageNumber,SecurityClassification,ImageHistory,SubjectArea,ExposureIndex,TIFF_EPStandardID,SensingMethod,
+    ShutterSpeedValue=37377,ApertureValue,BrightnessValue,ExposureBiasValue,MaxApertureValue,SubjectDistance,MeteringMode,LightSource,Flash,FocalLength,FlashEnergy,SpatialFrequencyResponse,Noise,FocalPlaneXResolution,FocalPlaneYResolution,FocalPlaneResolutionUnit,ImageNumber,SecurityClassification,ImageHistory,SubjectLocation,ExposureIndex,TIFF_EPStandardID,SensingMethod,
     StoNits=37439,
     MakerNote=37500,
     UserComment=37510,
@@ -116,6 +118,7 @@ typedef enum <uint16> eTAG {
     CalibrationIlluminant1=50778,CalibrationIlluminant2,BestQualityScale,
     Alias_Layer_Metadata=50784
 } TAG;
+// END:TIFF_Tags.txt
 
 // enum of TAG types
 typedef enum <uint16> eTAGTYPE {
