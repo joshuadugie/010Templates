@@ -2,15 +2,17 @@
 //--- 010 Editor v5.0.2 Binary Template
 //
 //      File: AndroidResource.bt
-//   Authors: lichao
-//	  E-mail: lichao.890427@163.com
-//   Version: 1.0
+//   Authors: lichao, fei_cong
+//    E-mail: lichao.890427@163.com, 346345565@qq.com
+//       Url: https://github.com/feicong/android_re
+//   Version: 1.1
 //   Purpose: Parse AndroidManifest.xml, res/*.xml, and resource.arsc 
 //            binary files in an Android APK package.
 //  Category: Operating System
 // File Mask: *.xml,*.arsc
 //  ID Bytes: 03 00, 02 00
 //   History: 
+//   1.1   2017-03-13 feicong: add ResTable_entry and ResTable_map_entry.
 //   1.0   2016-07-11 lichao: Initial release.
 //------------------------------------------------
 
@@ -2417,6 +2419,7 @@ typedef struct
 
 struct StringPoolType(int begin)
 {
+    FSeek(begin);
 	ResStringPool_header header;
 	if(header.stringCount > 0)
 		uint stringoffsets[header.stringCount];
@@ -2547,7 +2550,7 @@ typedef struct
     ushort styleIndex<comment="Index (1-based) of the style attribute. 0 if none">;
 } ResXMLTree_attrExt;
 
-struct Res_value
+typedef struct 
 {
     ushort size<comment="Number of bytes in this structure">;
     uchar res0<comment="Always set to 0">;     
@@ -2652,7 +2655,15 @@ struct Res_value
     // The data for this item, as interpreted according to dataType.
     typedef uint data_type;
     data_type data;
-};
+} Res_value <read=ResvalueRead>;
+
+string ResvalueRead(Res_value &val)
+{
+    if (val.dataType == TYPE_STRING)
+        return getString(val.data);
+    else 
+        return "";
+}
 
 typedef struct 
 {
@@ -2774,8 +2785,10 @@ typedef struct
     uint packageCount<comment="The number of ResTable_package structures">;
 } ResTable_header;
 
+
 typedef struct
 {
+    local int pos = FTell();
     struct ResChunk_header header;
     uint id<comment="Package IDs">;
     wchar_t name[128]<comment="Actual name of this package">;
@@ -2811,17 +2824,45 @@ typedef struct
     ushort size<comment="Number of bytes in this structure">;
     enum
 	{
-        // If set, this is a complex entry, holding a set of name/value
-        // mappings.  It is followed by an array of ResTable_map structures.
         FLAG_COMPLEX = 0x0001,
-        // If set, this resource has been declared public, so libraries
-        // are allowed to reference it.
-        FLAG_PUBLIC = 0x0002
+        FLAG_PUBLIC = 0x0002,
+        FLAG_WEAK = 0x0004
     };
     ushort flags;
-    // Reference into ResTable_package::keyStrings identifying this entry.
     ResStringPool_ref key;
-} ResTable_entry;
+} ResTable_entry <read=tableEntryRead>;
+
+string tableEntryRead(ResTable_entry &entry) {
+    return readString(entry.key);
+}
+
+typedef struct 
+{
+    uint indent;
+} ResTable_ref;
+
+typedef struct
+{
+    ResTable_entry entry;
+    ResTable_ref parent;
+    //uint parent;
+    uint count;
+} ResTable_map_entry;
+
+typedef struct 
+{
+    ResTable_ref name;
+    Res_value value;
+} ResTable_map;
+
+typedef struct
+{
+    ResTable_map_entry mapEntry;
+    local uint cnt = mapEntry.count;
+    if (cnt > 0) {
+        ResTable_map tablemap[cnt];
+    }
+} ResTable_map_entry0;
 
 typedef struct 
 {
@@ -2837,24 +2878,43 @@ typedef struct
     uint entryCount<comment="Number of uint32_t entry indices that follow">;
     uint entriesStart<comment="Offset from header where ResTable_entry data starts">;
     ResTable_config config<comment="Configuration this collection of entries is designed for">;
-	uint entries[entryCount];
-	FSeek(pos + entriesStart);
-	ResTable_entry resentry[ (header.size - entriesStart) / sizeof(ResTable_entry)];
+	uint entryOffsets[entryCount];
+    
+    local ushort size;
+    local uint i;
+    local uint entryOff;
+    if (entryCount > 0) {
+        for(i=0; i<entryCount; i++) {
+            entryOff = entryOffsets[i];
+            if (entryOff != 0xFFFFFFFF) {
+                size = ReadUInt(FTell());
+                if (size == sizeof(ResTable_entry)) {   //compare size is sample, or check ResTable_entry's flags
+                    ResTable_entry entry;
+                    Res_value value;
+                } else {
+                    ResTable_map_entry0 mapEntry;
+                }
+            }
+        }
+    }
+	//FSeek(pos + entriesStart);
+	//ResTable_entry resentry[ (header.size - entriesStart) / sizeof(ResTable_entry)];
 } ResTable_type;
 
 typedef struct(int begin)
 {
 	ResTable_package header;
+    FSeek(begin + header.header.headerSize);
 	local int pos = FTell();
 	local ushort ltype;
 	local ushort lheaderSize;
 	local uint lsize;
-	while(pos < begin + header.header.size - header.header.headerSize)
+	while(pos < begin + header.header.size)
 	{
+        //Printf("pos=%x begin=%x size=%x headersize=%x\n",pos,begin,header.header.size,header.header.headerSize);
 		ltype = ReadUShort(pos);
 		lheaderSize = ReadUShort(pos+2);
 		lsize = ReadUInt(pos+4);
-       
 		switch(ltype)
 		{
 			case RES_STRING_POOL_TYPE:
@@ -2934,12 +2994,12 @@ while(!FEof())
 	{
 		case RES_XML_TYPE:
 			XmlType(gpos);
-			break;
+			return;
 		case RES_TABLE_TYPE:
 			ResTableType(gpos);
-			break;
+			return;
 		default:
-			Printf("unknown %d\n",gtype);
+			Printf("unknown %x, pos:%x\n", gtype, gpos);
 			return;
 	}
 	FSeek(gpos + gsize);

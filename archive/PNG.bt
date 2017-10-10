@@ -2,20 +2,21 @@
 //--- 010 Editor Binary Template
 //
 //      File: PNG.bt
-//   Authors: Kevin O. Grover, RCS
-//   Version: 2.1
-//   Purpose: Parse a PNG (Portable Network Graphics) image file.
+//   Authors: Kevin O. Grover, RCS, Mister Wu
+//   Version: 2.2
+//   Purpose: Parse a PNG (Portable Network Graphics) and an APNG (Animated Portable Network Graphics) image file.
 //  Category: Image
-// File Mask: *.png
+// File Mask: *.png,*.apng
 //  ID Bytes: 89 50 4E 47 //%PNG
 //   History:
+//   2.2   2017-10-20 Mister Wu: Initial support of APNG chunks: acTL, fcTL, fdAT.
 //   2.1   2017-08-31 K. Grover: Better colors.  Alternate chunk colors.  Cleaned up messages.
 //   2.0   2016-02-10 SweetScape Software: Merged in extra chunks from PNG12Template.bt, updated header for repository submission.
 //   1.1   2009-02-23 K. Grover: Decode IHDR and tEXt chunks.
 //   1.0.1 2005-06-29 K. Grover: Fixed typos in comments.
 //   1.0   2005-05-11 K. Grover: Initial version.
 //
-// This template was written to the PNG 1.2 Specification.
+// This template was written to the PNG 1.2 Specification and includes chunks described in the APNG 1.0 Specification.
 // Note however, that it does not check nor parse all chunk subdata, so it
 // should work with all future PNG specifications.
 //
@@ -90,6 +91,17 @@ typedef struct {
     string profile_name;
     unsigned byte red;
 } PNG_ICCP_CHUNK_DATA;
+
+typedef enum <byte> {
+    APNG_DISPOSE_OP_NONE = 0,
+    APNG_DISPOSE_OP_BACKGROUND = 1,
+    APNG_DISPOSE_OP_PREVIOUS = 2
+} APNG_DISPOSE_OP;
+
+typedef enum <byte> {
+    APNG_BLEND_OP_SOURCE = 0,
+    APNG_BLEND_OP_OVER = 1
+} APNG_BLEND_OP;
 
 // Chunk Type
 typedef union {
@@ -262,6 +274,31 @@ struct PNG_CHUNK_SPLT (int chunkLen)
     byte spltData[chunkLen - Strlen(paletteName) -2];
 };
 
+struct PNG_CHUNK_ACTL
+{
+    uint32 num_frames;
+    uint32 num_plays;
+};
+
+struct PNG_CHUNK_FCTL
+{
+    uint32 sequence_number;
+    uint32 width;
+    uint32 height;
+    uint32 x_offset;
+    uint32 y_offset;
+    short  delay_num <format=decimal>;
+    short  delay_den <format=decimal>;
+    APNG_DISPOSE_OP dispose_op;
+    APNG_BLEND_OP blend_op;
+};
+
+struct PNG_CHUNK_FDAT
+{
+    uint32 sequence_number;
+    ubyte  frame_data[length-4];
+};
+
 // -- End: Specific Chunks
 
 local uint32 CHUNK_CNT = 0;
@@ -295,6 +332,12 @@ typedef struct {
         PNG_CHUNK_SBIT    sbit(chunk[0].ihdr.color_type);
     else if (type.cname == "sPLT")
         PNG_CHUNK_SPLT    splt(length);
+    else if (type.cname == "acTL")
+        PNG_CHUNK_ACTL    actl;
+    else if (type.cname == "fcTL")
+        PNG_CHUNK_FCTL    fctl;
+    else if (type.cname == "fdAT")
+        PNG_CHUNK_FDAT    fdat;
     else if( length > 0 )
         ubyte   data[length];       // Data (or not present)
     local quad data_size = FTell() - pos_start;
