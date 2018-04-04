@@ -4,12 +4,13 @@
 //      File: MP3.bt
 //   Authors: Ivan Getta
 //    E-mail: ivanitto@ukr.net
-//   Version: 1.1
-//   Purpose: Parse an MP3 music file. 
+//   Version: 1.2
+//   Purpose: Parse an MP3 music file.
 //  Category: Audio
 // File Mask: *.mp3
 //  ID Bytes: 49 44 33, FF
-//   History: 
+//   History:
+//   1.2   2018-01-31 Bartosz Dziewonski: Added probably partial and incomplete support for ID3v2.4 tags.
 //   1.1   2016-01-29 SweetScape: Updated header for repository submission.
 //   1.0   2005-02-18 I Getta: Initial release.
 //
@@ -56,6 +57,32 @@ local quad frame_header_offset, seek_pos, sum_bitrate = 0;
 local short data;
 local byte was_bad_sync, id3v1_tag_found = 0;
 local ubyte buf[3];
+
+
+typedef struct {
+    ubyte raw[4];
+
+    local uint32 computed = raw[0];
+    computed <<= 7;
+    computed |= raw[1];
+    computed <<= 7;
+    computed |= raw[2];
+    computed <<= 7;
+    computed |= raw[3];
+
+    if (raw[0] >= 0x80  ||  raw[1] >= 0x80  ||
+        raw[2] >= 0x80  ||  raw[3] >= 0x80)
+    {
+        Printf("MP3: warning: invalid ID3v2 synchsafe integer\n");
+    }
+} synchsafe_integer <read=read_synchsafe_integer>;
+
+string read_synchsafe_integer( synchsafe_integer &v )
+{
+    string s;
+    SPrintf( s, "%u", v.computed );
+    return s;
+}
 
 
 enum <ubyte> ID3_GENRES
@@ -148,7 +175,7 @@ struct ID3v2_HEADER
 
     DisplayFormatHex();
 
-    ubyte size[4]; // Is the size of the complete tag after unsynchronisation,
+    synchsafe_integer size; // Is the size of the complete tag after unsynchronisation,
                    // including padding, excluding the header but not excluding
                    // the extended header (total tag size - 10). Most
                    // significant bit (bit 7) of each byte is set to zero
@@ -214,33 +241,54 @@ struct ID3v2_FRAME
 };
 
 
+struct ID3v2_4_FRAME
+{
+    char id[4]; // four alpha chars
+
+    DisplayFormatDecimal();
+
+    synchsafe_integer size; // frame size without frame header
+
+    FRAME_FLAGS flags;
+
+    if (id[0] == 'T')
+    {
+        // frame contains text related data
+        enum <ubyte> {
+            ISO_8859_1,
+            UTF_16_with_BOM,
+            UTF_16BE_without_BOM,
+            UTF_8
+        } encoding;
+
+        char frame_data [size.computed - 1];
+    }
+    else
+    {
+        DisplayFormatHex();
+        ubyte frame_data [size.computed];
+    }
+};
+
 struct ID3v2_TAG
 {
     ID3v2_HEADER hdr;
 
     // calculating real size of the ID3v2 tag
-    local uint32 tag_sz = hdr.size[0];
-    tag_sz <<= 7;
-    tag_sz |= hdr.size[1];
-    tag_sz <<= 7;
-    tag_sz |= hdr.size[2];
-    tag_sz <<= 7;
-    tag_sz |= hdr.size[3];
+    local uint32 tag_sz = hdr.size.computed;
 
     //
     // An ID3v2 tag header can be detected with the following pattern:
     // $49 44 33 yy yy xx zz zz zz zz
     // Where yy is less than $FF, xx is the 'flags' byte and zz is less than $80.
     //
-    if (hdr.ver_major == 0xFF  ||  hdr.ver_revision == 0xFF  ||
-        hdr.size[0] >= 0x80  ||  hdr.size[1] >= 0x80  ||
-        hdr.size[2] >= 0x80  ||  hdr.size[3] >= 0x80)
+    if (hdr.ver_major == 0xFF  ||  hdr.ver_revision == 0xFF)
     {
         Printf("MP3: warning: invalid ID3v2 tag header\n");
     }
     else
     {
-        if (hdr.ver_major != 3  ||  hdr.flags.UNSYNCHRONISATION_USED  ||  hdr.flags.EXPERIMENTAL_TAG)
+        if ( !(hdr.ver_major == 3 || hdr.ver_major == 4)  ||  hdr.flags.UNSYNCHRONISATION_USED  ||  hdr.flags.EXPERIMENTAL_TAG)
         {
             Printf("MP3: warning: skipping unsupported ID3v2.%d tag\n", hdr.ver_major);
             SetBackColor(0xA9DCFF);
@@ -260,7 +308,10 @@ struct ID3v2_TAG
             do
             {
                 SetBackColor(frame_color);
-                ID3v2_FRAME tf;
+                if (hdr.ver_major == 3)
+                    ID3v2_FRAME tf;
+                else
+                    ID3v2_4_FRAME tf;
                 frame_color -= 0x020200;
             }
             while ( FTell() < tag_sz + sizeof(hdr)  &&  ReadByte(FTell()) != 0 );

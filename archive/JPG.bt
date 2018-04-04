@@ -2,14 +2,15 @@
 //--- 010 Editor v2.0 Binary Template
 //
 //      File: JPG.bt
-//   Authors: Mor FTP
-//    E-mail: morftp AT hotmail DOT com
-//   Version: 1.6.2
+//   Authors: Ibrahim Onaran
+//    E-mail: onaran AT gmail DOT com
+//   Version: 1.6.3
 //   Purpose: Template for JPG image files. 
 //  Category: Image
 // File Mask: *.jpg,*.jpeg
 //  ID Bytes: FF D8 FF
 //   History: 
+//   1.6.3 2018-01-04 I Onaran: Changed author information.
 //   1.6.2 2016-11-29 Bartosz Dziewonski: Search for end of file marker forwards rather than backwards.
 //                    Data after the marker may contain bytes that look just like the marker itself.
 //                    Also, use FindFirst() for better performance.

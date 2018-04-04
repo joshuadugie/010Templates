@@ -4,12 +4,13 @@
 //      File: PCAP.bt
 //   Authors: Didier Stevens
 //   Website: https://DidierStevens.com
-//   Version: 0.2
+//   Version: 0.3
 //   Purpose: Parse a PCAP network capture file.
 //  Category: Network
 // File Mask: *.pcap
 //  ID Bytes: D4 C3 B2 A1
-//   History: 
+//   History:
+//   0.3   2018-03-15 Banny: support raw data pcap file.
 //   0.2   2016-02-12 SweetScape Software: Updated header for repository submission.
 //   0.1   D Stevens: Initial release.
 //
@@ -121,14 +122,19 @@ string L4protoName(BYTE val)
     }
 }
 
-typedef struct {
+typedef struct (uint32 network) {
         time_t ts_sec;         /* timestamp seconds */
         uint32 ts_usec;        /* timestamp microseconds */
         uint32 incl_len;       /* number of octets of packet saved in file */
         uint32 orig_len;       /* actual length of packet */
         BigEndian();
-        Layer_2 L2 <name="Layer 2">;
-        Layer_3 L3(L2.L3type) <name="Layer 3">;
+
+        if (network == 101) {
+            Layer_3 L3(0x0800) <name="Layer 3">;
+        } else {
+            Layer_2 L2 <name="Layer 2">;
+            Layer_3 L3(L2.L3type) <name="Layer 3">;
+        }
         Layer_4 L4(L3.ip_hdr_len,L3.total_length,L3.L4proto)<name="Layer 4">;
 
         if (L3.L4proto == 0x6)
@@ -187,6 +193,5 @@ PCAPHEADER header;
 
 while( !FEof() )
 {
-	PCAPRECORD record<name="Frame">;
-
+	PCAPRECORD record(header.network) <name="Frame">;
 }

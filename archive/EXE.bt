@@ -5,13 +5,14 @@
 //   Authors: xSpy, Peter Kankowski, SweetScape Software
 //    E-mail: cdutboy@gmail.com (xSpy)
 //   Website: http://smallcode.weblogs.us (Peter Kankowski)
-//   Version: 0.3
+//   Version: 0.4
 //   Purpose: Parse Windows executable exe, dll, and sys files. 
 //            Supports 32 and 64 bit.
 //  Category: Executable
 // File Mask: *.exe,*.dll,*.sys
 //  ID Bytes: 4D 5A //MZ
 //   History: 
+//   0.4     2018-03-08 Rafal Cyran:   Fixed size of IMAGE_EXPORT_DIRECTORY
 //   0.3     2016-03-31 T Strazzere:   Fixed issue with IMAGE_IMPORT_DESCRIPTOR
 //   0.2     2016-03-10 Yann Le Brech: Added LittleEndian();
 //   0.1     2016-02-15 SweetScape Software: Merged changes from PETemplate.bt and EXETemplate2.bt
@@ -459,7 +460,7 @@ typedef struct (string& sExportFuncName,ULONG ulDestRVA,string& sJmpName)
    local ULONG ulLocalDestRVA=ulDestRVA;
    local string sLocalJmpName=sJmpName;
 
-   char Function[Strlen(sExportFuncName)];
+   char Function[Strlen(sExportFuncName) + 1];
 }IMAGE_EXPORT_BY_NAME <read=ReadExportByName,comment=commentExportByName>;
 
 string ReadExportByName(IMAGE_EXPORT_BY_NAME& ExportByName)
@@ -508,6 +509,9 @@ typedef struct {
     local string sExportName="";
     local string sJmpName="";
    
+    local ULONG ulCurPos = FTell();
+    local ULONG ulEndPos = ulCurPos;
+
     //List Export names.
     NameArrayFOA = RVA2FOA(ExportDir.AddressOfNames);
     OrdinalArrayFOA = RVA2FOA(ExportDir.AddressOfNameOrdinals);
@@ -541,7 +545,15 @@ typedef struct {
               IMAGE_EXPORT_BY_NAME ExportByName(sExportName,ulFuncRVA,sJmpName);
             }
         }
+
+        ulCurPos = FTell();
+
+        if(ulEndPos < ulCurPos)
+            ulEndPos = ulCurPos;
     }
+
+    FSeek(ulEndPos);
+
 }IMAGE_EXPORT_DIRECTORY <comment=commentExportDirectory>;
 
 string commentExportDirectory(IMAGE_EXPORT_DIRECTORY& ExportDir)
