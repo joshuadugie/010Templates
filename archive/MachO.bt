@@ -29,7 +29,8 @@
 //    (Related to an 010Editor template bug)
 //------------------------------------------------
 
-// Mach-o's should be Little Endian only -- except for the fat_header/fat_archLittleEndian();
+// Mach-o's should be Little Endian only -- except for the fat_header/fat_arch
+LittleEndian();
 
 typedef enum <uint> {
     MACHO_32        = 0xFEEDFACE, // 32-bit mach object file
