@@ -5,13 +5,15 @@
 //   Authors: xSpy, Peter Kankowski, SweetScape Software
 //    E-mail: cdutboy@gmail.com (xSpy)
 //   Website: http://smallcode.weblogs.us (Peter Kankowski)
-//   Version: 0.4
+//   Version: 0.5
 //   Purpose: Parse Windows executable exe, dll, and sys files.
 //            Supports 32 and 64 bit.
 //  Category: Executable
 // File Mask: *.exe,*.dll,*.sys
 //  ID Bytes: 4D 5A //MZ
 //   History:
+//   0.5     2018-04-21 Joshua Dugie:  Added resource section parsing, cleaned up formatting and order,
+//                                     also added Resource Directory String parsing
 //   0.4     2018-03-08 Rafal Cyran:   Fixed size of IMAGE_EXPORT_DIRECTORY
 //   0.3     2016-03-31 T Strazzere:   Fixed issue with IMAGE_IMPORT_DESCRIPTOR
 //   0.2     2016-03-10 Yann Le Brech: Added LittleEndian();
@@ -501,6 +503,104 @@ typedef struct
     FSeek(ulEndPos);
 } IMAGE_EXPORT_DIRECTORY <comment=CommentExportDirectory>;
 
+typedef struct
+{
+    WORD Length;
+    if (Length > 0)
+    {
+        BYTE String[Length*2];
+    }
+} pascal_wstring_t <optimize=false>;
+
+typedef pascal_wstring_t RESOURCE_DIRECTORY_STRING;
+
+typedef struct
+{
+    local int i = 0;
+    local int EntryIntegerID = GetEntryIntegerID( parentof(parentof(parentof(parentof(this)))) );
+    RESOURCE_DIRECTORY_STRING Strings[16] <optimize=false,comment=CommentResourceDirectoryString>;
+} RESOURCE_DIRECTORY_STRINGS <optimize=false>;
+
+typedef struct
+{
+    local int originalPos;
+
+    DWORD DataRVA <format=hex>;
+    DWORD DataSize;
+    DWORD CodePage;
+    DWORD Reserved;
+
+    originalPos = FTell();
+    FSeek(RVA2FOA(DataRVA));
+    if (!IsResourceDirectoryString(this))
+    {
+        UCHAR Data[DataSize];
+    }
+    else
+    {
+        RESOURCE_DIRECTORY_STRINGS ResourceDirectoryStrings;
+    }
+    FSeek(originalPos);
+} RESOURCE_DATA_ENTRY <optimize=false>;
+
+typedef struct (int isNameEntry, DWORD level)
+{
+    local int IsNameEntry = 0;
+    local int originalPos;
+    local DWORD Level;
+    Level = level;
+    IsNameEntry = isNameEntry;
+    if (IsNameEntry > 0)
+    {
+        DWORD NameOffset <comment=CommentResourceNameOffset,format=hex>;
+    }
+    else
+    {
+        DWORD IntegerID <comment=CommentIntegerID,format=decimal>;
+    }
+
+    local DWORD NextDWORD = ReadInt();
+    if (NextDWORD & 0x80000000)
+    {
+        DWORD SubdirectoryOffset <format=hex>;
+        local DWORD dwMaskedOffset;
+        dwMaskedOffset = SubdirectoryOffset & 0x7fffffff;
+        originalPos = FTell();
+        FSeek(RVA2FOA(NtHeader.OptionalHeader.DataDirArray.Resource.VirtualAddress + dwMaskedOffset));
+        struct RESOURCE_DIRECTORY_TABLE RsourceDirectoryTable(Level+1);
+        FSeek(originalPos);
+    }
+    else
+    {
+        DWORD DataEntryOffset <format=hex>;
+        originalPos = FTell();
+        FSeek(RVA2FOA(NtHeader.OptionalHeader.DataDirArray.Resource.VirtualAddress+DataEntryOffset));
+        RESOURCE_DATA_ENTRY ResourceDataEntry;
+        FSeek(originalPos);
+    }
+} RESOURCE_DIRECTORY_ENTRY <optimize=false>;
+
+typedef struct (DWORD level)
+{
+    local DWORD Level;
+
+    DWORD   Characteristics <comment="Reserved, currently 0">;
+    time_t  TimeDateStamp;
+    WORD    MajorVersion        <format=decimal>;
+    WORD    MinorVersion        <format=decimal>;
+    WORD    NumberOfNameEntries <format=decimal>;
+    WORD    NumberOfIDEntries   <format=decimal>;
+
+    Level = level;
+    if (NumberOfNameEntries > 0)
+    {
+        RESOURCE_DIRECTORY_ENTRY NameEntries(1, Level)[NumberOfNameEntries] <optimize=false>;
+    }
+    if (NumberOfIDEntries > 0)
+    {
+        RESOURCE_DIRECTORY_ENTRY IDEntries(0, Level)[NumberOfIDEntries] <optimize=false>;
+    }
+} RESOURCE_DIRECTORY_TABLE <comment=CommentResourceDirectoryTable,optimize=false>;
 
 typedef struct
 {
@@ -576,7 +676,8 @@ void ParseResource()
     {
        return;
     }
-    //FixMe
+    FSeek(RVA2FOA(NtHeader.OptionalHeader.DataDirArray.Resource.VirtualAddress));
+    RESOURCE_DIRECTORY_TABLE ResourceDirectoryTable(1);
 }
 
 // IMAGE_DIRECTORY_ENTRY_EXCEPTION
@@ -770,8 +871,6 @@ string CommentExportDirectory(IMAGE_EXPORT_DIRECTORY& ExportDir)
     return ReadString(RVA2FOA(ExportDir.Name));
 }
 
-
-
 string CommentBaseRelocBlock(WORD Block)
 {
     if (0x3000 == (Block & 0xF000))
@@ -793,6 +892,165 @@ string CommentImageBaseRelocation(IMAGE_BASE_RELOCATION& BaseReloc)
     return sComment;
 }
 
+string CommentResourceNameOffset(DWORD& NameOffset)
+{
+    local DWORD   dwMaskedOffset = (NameOffset & 0x7fffffff);
+    local wstring wsComment      = L"";
+    local string  sComment       = "";
+    local DWORD   loc            = RVA2FOA(NtHeader.OptionalHeader.DataDirArray.Resource.VirtualAddress)+dwMaskedOffset;
+    local WORD    actualLength   = ReadUShort(loc);
+    wsComment = ReadWString(loc + sizeof(WORD));
+    wsComment = WSubStr(wsComment, 0, actualLength);
+    sComment = WStringToString(wsComment);
+    return sComment;
+}
+
+short GetNameEntries(RESOURCE_DIRECTORY_TABLE& ResourceDirectoryTable)
+{
+    return ResourceDirectoryTable.NumberOfNameEntries;
+}
+
+int GetLevel(RESOURCE_DIRECTORY_ENTRY& ResourceDirectoryEntry)
+{
+    return ResourceDirectoryEntry.Level;
+}
+
+string GetType(DWORD& IntegerID)
+{
+    local string sComment = "";
+
+    if      (IntegerID == 0 || IntegerID > 255) SPrintf(sComment, "%d: Unknown",            IntegerID);
+    else if (IntegerID == 1)                    SPrintf(sComment, "%d: RT_CURSOR",          IntegerID);
+    else if (IntegerID == 2)                    SPrintf(sComment, "%d: RT_BITMAP",          IntegerID);
+    else if (IntegerID == 3)                    SPrintf(sComment, "%d: RT_ICON",            IntegerID);
+    else if (IntegerID == 4)                    SPrintf(sComment, "%d: RT_MENU",            IntegerID);
+    else if (IntegerID == 5)                    SPrintf(sComment, "%d: RT_DIALOG",          IntegerID);
+    else if (IntegerID == 6)                    SPrintf(sComment, "%d: RT_STRING",          IntegerID);
+    else if (IntegerID == 7)                    SPrintf(sComment, "%d: RT_FONTDIR",         IntegerID);
+    else if (IntegerID == 8)                    SPrintf(sComment, "%d: RT_FONT",            IntegerID);
+    else if (IntegerID == 9)                    SPrintf(sComment, "%d: RT_ACCELERATOR",     IntegerID);
+    else if (IntegerID == 10)                   SPrintf(sComment, "%d: RT_RCDATA",          IntegerID);
+    else if (IntegerID == 11)                   SPrintf(sComment, "%d: RT_MESSAGETABLE",    IntegerID);
+    else if (IntegerID == 12)                   SPrintf(sComment, "%d: RT_GROUP_CURSOR",    IntegerID);
+    else if (IntegerID == 13)                   SPrintf(sComment, "%d: Reserved",           IntegerID);
+    else if (IntegerID == 14)                   SPrintf(sComment, "%d: RT_GROUP_ICON",      IntegerID);
+    else if (IntegerID == 15)                   SPrintf(sComment, "%d: Reserved",           IntegerID);
+    else if (IntegerID == 16)                   SPrintf(sComment, "%d: RT_VERSION",         IntegerID);
+    else if (IntegerID == 17)                   SPrintf(sComment, "%d: RT_DLGINCLUDE",      IntegerID);
+    else if (IntegerID == 18)                   SPrintf(sComment, "%d: Reserved",           IntegerID);
+    else if (IntegerID == 19)                   SPrintf(sComment, "%d: RT_PLUGPLAY",        IntegerID);
+    else if (IntegerID == 20)                   SPrintf(sComment, "%d: RT_VXD",             IntegerID);
+    else if (IntegerID == 21)                   SPrintf(sComment, "%d: RT_ANICURSOR",       IntegerID);
+    else if (IntegerID == 22)                   SPrintf(sComment, "%d: RT_ANIICON",         IntegerID);
+    else if (IntegerID == 23)                   SPrintf(sComment, "%d: RT_HTML",            IntegerID);
+    else if (IntegerID == 24)                   SPrintf(sComment, "%d: RT_MANIFEST",        IntegerID);
+    else if (IntegerID < 256)                   SPrintf(sComment, "%d: Reserved",           IntegerID);
+
+    return sComment;
+}
+
+string CommentIntegerID(DWORD& IntegerID)
+{
+    local string sComment = "";
+    local int level = GetLevel( parentof(IntegerID) );
+    switch(level)
+    {
+        case 1:
+            sComment = "Type (" + GetType(IntegerID) + ")";
+            break;
+        case 2:
+            sComment = "";
+            break;
+        case 3:
+            sComment = "Language";
+            break;
+        default:
+            break;
+    }
+
+    return sComment;
+}
+
+string CommentResourceDirectoryString(RESOURCE_DIRECTORY_STRING& str)
+{
+    local string sComment = "";
+    local DWORD loc = startof(str);
+    local WORD actualLength = ReadShort(loc);
+    local DWORD BlockNumber = GetEntryIntegerID( parentof(parentof(parentof(parentof(parentof(str))))) );
+    local int myIndex = 0;
+    local DWORD blockStart = startof(parentof(str));
+    local DWORD curLoc = blockStart;
+    while(curLoc != loc)
+    {
+        myIndex++;
+        curLoc += 2*ReadUShort(curLoc)+sizeof(WORD);
+    }
+    local DWORD myStringID  = (BlockNumber-1)*16+myIndex;
+    if (actualLength > 0)
+    {
+        local wstring wsComment = ReadWString(startof(str) + sizeof(WORD));
+        wsComment = WSubStr(wsComment, 0, actualLength);
+        SPrintf(sComment, "String ID #%d: %s", myStringID, WStringToString(wsComment));
+    }
+    else
+    {
+        SPrintf(sComment, "String ID #%d: <null>", myStringID);
+    }
+    return sComment;
+}
+
+string CommentResourceDirectoryTable(RESOURCE_DIRECTORY_TABLE& ResourceDirectoryTable)
+{
+    local string sComment = "";
+    local DWORD totalEntries = ResourceDirectoryTable.NumberOfNameEntries + ResourceDirectoryTable.NumberOfIDEntries;
+
+    if (totalEntries == 1)
+    {
+        SPrintf(sComment, "Level %d, %d entry", ResourceDirectoryTable.Level, totalEntries);
+    }
+    else
+    {
+        SPrintf(sComment, "Level %d, %d entries", ResourceDirectoryTable.Level, totalEntries);
+    }
+
+    return sComment;
+}
+
+int GetEntryIntegerID(RESOURCE_DIRECTORY_ENTRY& ResourceDirectoryEntry)
+{
+    return ResourceDirectoryEntry.IntegerID;
+}
+
+int GetEntryIsNameEntry(RESOURCE_DIRECTORY_ENTRY& ResourceDirectoryEntry)
+{
+    return ResourceDirectoryEntry.IsNameEntry;
+}
+
+int GetParentTableLevel(RESOURCE_DIRECTORY_TABLE& ResourceDirectoryTable)
+{
+    return ResourceDirectoryTable.Level;
+}
+
+int IsResourceDirectoryString(RESOURCE_DATA_ENTRY& ResourceDataEntry)
+{
+    local int ParentTableLevel = GetParentTableLevel( parentof(parentof(ResourceDataEntry)) );
+    if (ParentTableLevel == 3)
+    {
+        local int BaseEntryIsNameEntry = GetEntryIsNameEntry(
+            parentof(parentof(parentof(parentof(parentof(ResourceDataEntry))))));
+        if (BaseEntryIsNameEntry == 0)
+        {
+            local int BaseEntryIntegerID = GetEntryIntegerID(
+                parentof(parentof(parentof(parentof(parentof(ResourceDataEntry))))));
+            if (BaseEntryIntegerID == 6)
+            {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
 
 string CommentBaseRelocationTable(BASE_RELOCATION_TABLE& RelocTable)
 {
