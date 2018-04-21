@@ -293,26 +293,6 @@ typedef struct
     }
 } IMAGE_NT_HEADERS <size=CalcImageNtHeadersSize>;
 
-int CalcImageNtHeadersSize(IMAGE_NT_HEADERS& stNtHeader)
-{
-    local WORD OptionalHeaderMagic = ReadShort(startof(stNtHeader) + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) );    
-
-    if(0x10B ==  OptionalHeaderMagic)
-    {
-        Printf("PE32\n");
-        return 0xF8;    //sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + sizeof(IMAGE_OPTIONAL_HEADER32);
-    }
-    else if (0x20B == OptionalHeaderMagic)
-    {
-        Printf("PE64\n");
-        return 0x108;   //sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + sizeof(IMAGE_OPTIONAL_HEADER64);
-    }
-    else
-    {
-        return sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + 0; //
-    }
-    return 0;
-}
 
 /**** GENERIC SECTION HEADERS ****/
 typedef struct
@@ -373,21 +353,12 @@ typedef struct
     SECTION_CHARACTERISTICS Characteristics <format=hex>;
 } IMAGE_SECTION_HEADER <read=ReadImageSectionHeader>;
 
-string ReadImageSectionHeader( IMAGE_SECTION_HEADER &h )
-{
-    return h.Name;
-}
-
 typedef struct (IMAGE_SECTION_HEADER& SecHeader)
 {
     local string sSecName = SecHeader.Name;
     UCHAR Data[SecHeader.SizeOfRawData];
 } IMAGE_SECTION_DATA <read=ReadSectionData>;
 
-string ReadSectionData(IMAGE_SECTION_DATA& SecData)
-{
-    return SecData.sSecName;
-}
 
 /**** SECTION-SPECIFIC STRUCTURES ****/
 typedef struct (int nNameLen)
@@ -395,11 +366,6 @@ typedef struct (int nNameLen)
     WORD    Hint;
     BYTE    Name[nNameLen];
 } IMAGE_IMPORT_BY_NAME <comment=CommentImageImportByName>;
-
-string commentImageImportByName(IMAGE_IMPORT_BY_NAME& ImportByName)
-{
-    return ImportByName.Name;
-}
 
 typedef struct
 {
@@ -454,11 +420,6 @@ typedef struct
     }
 } IMAGE_IMPORT_DESCRIPTOR <read=ReadImageImportDescriptor>;
 
-string ReadImageImportDescriptor(IMAGE_IMPORT_DESCRIPTOR& ImportDescriptor)
-{
-    return ReadString( RVA2FOA(ImportDescriptor.Name));
-}
-
 typedef struct (string sExportFuncName, ULONG ulDestRVA, string sJmpName)
 {
     local ULONG ulLocalDestRVA = ulDestRVA;
@@ -466,27 +427,6 @@ typedef struct (string sExportFuncName, ULONG ulDestRVA, string sJmpName)
 
     char Function[Strlen(sExportFuncName) + 1];
 } IMAGE_EXPORT_BY_NAME <read=ReadExportByName,comment=CommentExportByName>;
-
-string ReadExportByName(IMAGE_EXPORT_BY_NAME& ExportByName)
-{
-    return ExportByName.Function;
-}
-
-string commentExportByName(IMAGE_EXPORT_BY_NAME& ExportByName)
-{
-    local string sComment="";
-
-    if (0 == Strlen(ExportByName.sLocalJmpName) )
-    {
-        SPrintf(sComment,"0x%X",ExportByName.ulLocalDestRVA);
-    }
-    else
-    {
-        SPrintf(sComment,"%s",ExportByName.sLocalJmpName);
-    }
-    
-    return sComment;
-}
 
 typedef struct
 {
@@ -561,59 +501,6 @@ typedef struct
     FSeek(ulEndPos);
 } IMAGE_EXPORT_DIRECTORY <comment=CommentExportDirectory>;
 
-string commentExportDirectory(IMAGE_EXPORT_DIRECTORY& ExportDir)
-{
-    return ReadString(RVA2FOA(ExportDir.Name));
-}
-
-ULONG RVA2FOA(ULONG ulRVA)
-{
-    local int i=0;  
-    
-    for(i=0; i < NtHeader.FileHeader.NumberOfSections; i++)
-    {
-        if ( (ulRVA >= SectionHeaders[i].VirtualAddress) && (ulRVA <= SectionHeaders[i].VirtualAddress + SectionHeaders[i].SizeOfRawData) )
-        {
-          return SectionHeaders[i].PointerToRawData + (ulRVA - SectionHeaders[i].VirtualAddress);
-        } 
-    }
-    return 0;
-}
-
-string LocationRVA(ULONG ulRVA)
-{
-    local int i=0;  
-    
-    for(i=0; i < NtHeader.FileHeader.NumberOfSections; i++)
-    {
-        if ( (ulRVA >= SectionHeaders[i].VirtualAddress) && (ulRVA <= SectionHeaders[i].VirtualAddress + SectionHeaders[i].SizeOfRawData) )
-        {
-          return SectionHeaders[i].Name;
-        } 
-    }
-    return "";
-}
-
-string CommentRVA2FOA(DWORD dwRVA)
-{
-   local string sComment="";
-   if (0 != dwRVA)
-   {
-     SPrintf(sComment,"%s FOA = 0x%X \n",LocationRVA(dwRVA),RVA2FOA(dwRVA));   
-   }
-   return sComment;
-}
-
-string CommentRVAString(DWORD dwRVA)
-{
-    local string sComment="";
-
-    if (0 != dwRVA)
-    {
-        SPrintf(sComment,"%s FOA = 0x%X -> %s",LocationRVA(dwRVA),RVA2FOA(dwRVA),ReadString(RVA2FOA(dwRVA)) );
-    }
-    return sComment; 
-}
 
 typedef struct
 {
@@ -627,30 +514,6 @@ typedef struct
     WORD Block[ulBlockNum] <format=hex,comment=CommentBaseRelocBlock>;
 
 } IMAGE_BASE_RELOCATION <comment=CommentImageBaseRelocation>;
-
-
-
-string CommentBaseRelocBlock(WORD Block)
-{
-    if(0x3000 == (Block & 0xF000) )
-    {
-        return "HIGHLOW";
-    }
-    else
-    {
-        return "ABSOLUTE";
-    }
-
-    return "";
-}
-
-
-string commentImageBaseRelocation(IMAGE_BASE_RELOCATION& BaseReloc)
-{
-    local string sComment="";
-    SPrintf(sComment,"%d",BaseReloc.ulBlockNum);
-    return sComment;
-}
 
 typedef struct
 {
@@ -667,12 +530,6 @@ typedef struct
     }
 } BASE_RELOCATION_TABLE <comment=CommentBaseRelocationTable>;
 
-string commentBaseRelocationTable(BASE_RELOCATION_TABLE& RelocTable)
-{
-    local string sComment="";
-    SPrintf(sComment,"%d",RelocTable.ulRelocNum);
-    return sComment;
-}
 
 /**** PARSING UTILITY FUNCTIONS ****/
 
@@ -793,6 +650,157 @@ void ParseDelayImport()
     }
     //FixMe
 }
+
+ULONG RVA2FOA(ULONG ulRVA)
+{
+    local int i=0;
+
+    for (i = 0; i < NtHeader.FileHeader.NumberOfSections; i++)
+    {
+        if ( (ulRVA >= SectionHeaders[i].VirtualAddress) && (ulRVA <= SectionHeaders[i].VirtualAddress + SectionHeaders[i].SizeOfRawData) )
+        {
+          return SectionHeaders[i].PointerToRawData + (ulRVA - SectionHeaders[i].VirtualAddress);
+        }
+    }
+    return 0;
+}
+
+int CalcImageNtHeadersSize(IMAGE_NT_HEADERS& stNtHeader)
+{
+    local WORD OptionalHeaderMagic = ReadShort(startof(stNtHeader) + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) );
+
+    if (0x10B ==  OptionalHeaderMagic)
+    {
+        Printf("PE32\n");
+        return 0xF8;    //sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + sizeof(IMAGE_OPTIONAL_HEADER32);
+    }
+    else if (0x20B == OptionalHeaderMagic)
+    {
+        Printf("PE64\n");
+        return 0x108;   //sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + sizeof(IMAGE_OPTIONAL_HEADER64);
+    }
+    else
+    {
+        return sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + 0;
+    }
+    return 0;
+}
+
+
+/**** READ AND WRITE UTILITY FUNCTIONS ****/
+string ReadImageSectionHeader(IMAGE_SECTION_HEADER& h)
+{
+    return h.Name;
+}
+
+string ReadSectionData(IMAGE_SECTION_DATA& SecData)
+{
+    return SecData.sSecName;
+}
+
+string ReadImageImportDescriptor(IMAGE_IMPORT_DESCRIPTOR& ImportDescriptor)
+{
+    return ReadString( RVA2FOA(ImportDescriptor.Name));
+}
+
+string ReadExportByName(IMAGE_EXPORT_BY_NAME& ExportByName)
+{
+    return ExportByName.Function;
+}
+
+
+/**** COMMMENT UTILITY FUNCTIONS ****/
+string LocationRVA(ULONG ulRVA)
+{
+    local int i=0;
+
+    for (i = 0; i < NtHeader.FileHeader.NumberOfSections; i++)
+    {
+        if ( (ulRVA >= SectionHeaders[i].VirtualAddress) && (ulRVA <= SectionHeaders[i].VirtualAddress + SectionHeaders[i].SizeOfRawData) )
+        {
+          return SectionHeaders[i].Name;
+        }
+    }
+    return "";
+}
+
+string CommentRVA2FOA(DWORD dwRVA)
+{
+    local string sComment = "";
+    if (0 != dwRVA)
+    {
+        SPrintf(sComment, "%s FOA = 0x%X \n", LocationRVA(dwRVA), RVA2FOA(dwRVA));
+    }
+    return sComment;
+}
+
+string CommentRVAString(DWORD dwRVA)
+{
+    local string sComment = "";
+    if (0 != dwRVA)
+    {
+        SPrintf(sComment, "%s FOA = 0x%X -> %s", LocationRVA(dwRVA), RVA2FOA(dwRVA), ReadString(RVA2FOA(dwRVA)) );
+    }
+    return sComment;
+}
+
+string CommentImageImportByName(IMAGE_IMPORT_BY_NAME& ImportByName)
+{
+    return ImportByName.Name;
+}
+
+string CommentExportByName(IMAGE_EXPORT_BY_NAME& ExportByName)
+{
+    local string sComment = "";
+
+    if (0 == Strlen(ExportByName.sLocalJmpName))
+    {
+        SPrintf(sComment, "0x%X", ExportByName.ulLocalDestRVA);
+    }
+    else
+    {
+        SPrintf(sComment, "%s", ExportByName.sLocalJmpName);
+    }
+
+    return sComment;
+}
+
+string CommentExportDirectory(IMAGE_EXPORT_DIRECTORY& ExportDir)
+{
+    return ReadString(RVA2FOA(ExportDir.Name));
+}
+
+
+
+string CommentBaseRelocBlock(WORD Block)
+{
+    if (0x3000 == (Block & 0xF000))
+    {
+        return "HIGHLOW";
+    }
+    else
+    {
+        return "ABSOLUTE";
+    }
+
+    return "";
+}
+
+string CommentImageBaseRelocation(IMAGE_BASE_RELOCATION& BaseReloc)
+{
+    local string sComment = "";
+    SPrintf(sComment, "%d", BaseReloc.ulBlockNum);
+    return sComment;
+}
+
+
+string CommentBaseRelocationTable(BASE_RELOCATION_TABLE& RelocTable)
+{
+    local string sComment = "";
+    SPrintf(sComment,"%d",RelocTable.ulRelocNum);
+    return sComment;
+}
+
 
 /**** PARSING CODE ****/
 LittleEndian();
