@@ -516,8 +516,6 @@ typedef pascal_wstring_t RESOURCE_DIRECTORY_STRING;
 
 typedef struct
 {
-    local int i = 0;
-    local int EntryIntegerID = GetEntryIntegerID( parentof(parentof(parentof(parentof(this)))) );
     RESOURCE_DIRECTORY_STRING Strings[16] <optimize=false,comment=CommentResourceDirectoryString>;
 } RESOURCE_DIRECTORY_STRINGS <optimize=false>;
 
@@ -574,7 +572,7 @@ typedef struct (int isNameEntry, DWORD level)
     {
         DWORD DataEntryOffset <format=hex>;
         originalPos = FTell();
-        FSeek(RVA2FOA(NtHeader.OptionalHeader.DataDirArray.Resource.VirtualAddress+DataEntryOffset));
+        FSeek(RVA2FOA(NtHeader.OptionalHeader.DataDirArray.Resource.VirtualAddress + DataEntryOffset));
         RESOURCE_DATA_ENTRY ResourceDataEntry;
         FSeek(originalPos);
     }
@@ -897,7 +895,7 @@ string CommentResourceNameOffset(DWORD& NameOffset)
     local DWORD   dwMaskedOffset = (NameOffset & 0x7fffffff);
     local wstring wsComment      = L"";
     local string  sComment       = "";
-    local DWORD   loc            = RVA2FOA(NtHeader.OptionalHeader.DataDirArray.Resource.VirtualAddress)+dwMaskedOffset;
+    local DWORD   loc            = RVA2FOA(NtHeader.OptionalHeader.DataDirArray.Resource.VirtualAddress) + dwMaskedOffset;
     local WORD    actualLength   = ReadUShort(loc);
     wsComment = ReadWString(loc + sizeof(WORD));
     wsComment = WSubStr(wsComment, 0, actualLength);
