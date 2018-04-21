@@ -57,6 +57,12 @@ typedef struct
     LONG   AddressOfNewExeHeader    <comment="NtHeader Offset",format=hex>;
 } IMAGE_DOS_HEADER;
 
+typedef struct
+{
+    UCHAR Data[DosHeader.AddressOfNewExeHeader - sizeof(IMAGE_DOS_HEADER)] <comment="Space between DOS header and NT header">;
+    Printf("Space between DOS header and NT header is %d bytes\n", DosHeader.AddressOfNewExeHeader - sizeof(IMAGE_DOS_HEADER));
+} IMAGE_DOS_STUB;
+
 typedef enum<WORD>
 {
     IMAGE_MACHINE_UNKNOWN  = 0,
@@ -416,11 +422,7 @@ typedef struct
 
 
     ulOriginalFirstThunkFOA = RVA2FOA(DUMMYUNIONNAME.OriginalFirstThunk);
-    if ((0x20b == NtHeader.OptionalHeader.Magic))
-    {
-                   
-    }
-    else
+    if (!(0x20b == NtHeader.OptionalHeader.Magic))
     {
         nNameIndex =0;
 
@@ -431,13 +433,9 @@ typedef struct
             if (0 == ulThrunk)
             {
                 break;
-            }     
-	              
-            if (ulThrunk & 0x80000000)
-            {
-		        Printf("mport by order \n");
             }
-            else
+
+            if (!(ulThrunk & 0x80000000))
             {
                 nNameLen = Strlen(ReadString(RVA2FOA(ulThrunk) + sizeof(WORD)));
                 if (0 != nNameLen)
@@ -812,12 +810,7 @@ if (0 == DosHeader.AddressOfNewExeHeader )
     return 2;
 }
 
-struct IMAGE_DOS_STUB
-{
-    UCHAR Data[DosHeader.AddressOfNewExeHeader - sizeof(IMAGE_DOS_HEADER)] <comment="Space between dos header and nt header">;
-    Printf("Space between dos header and nt header is %d bytes \n",DosHeader.AddressOfNewExeHeader - sizeof(IMAGE_DOS_HEADER));
-} DosStub;
-
+IMAGE_DOS_STUB DosStub;
 FSeek(DosHeader.AddressOfNewExeHeader);
 IMAGE_NT_HEADERS NtHeader <bgcolor=cLtPurple>;
 if (0x00004550 != NtHeader.Signature)
@@ -835,7 +828,7 @@ if (NtHeader.OptionalHeader.SizeOfHeaders - ulRawHeaderSize > 0)
 {
     UCHAR Space2[NtHeader.OptionalHeader.SizeOfHeaders - ulRawHeaderSize] <hidden=true,fgcolor=cRed,comment="Space between header and first section">;
 }
-Printf("Space between headers and first sections is %d bytes\n",NtHeader.OptionalHeader.SizeOfHeaders - ulRawHeaderSize);
+Printf("Space between headers and first sections is %d bytes\n", sizeof(Space2));
 
 FSeek(NtHeader.OptionalHeader.SizeOfHeaders);
 
