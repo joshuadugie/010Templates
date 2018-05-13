@@ -3,25 +3,21 @@
 //
 //      File: PCAPNG.bt
 //   Authors: Kevin O. Grover
-//   Version: 1.0
+//   Version: 1.1
 //   Purpose: Parse a PCAPNG Packet Capture file.
 //  Category: Network
-// File Mask: *.pcapng
+// File Mask: *.pcapng,*.ntar
 //  ID Bytes: 0A 0D 0D 0A
-// Reference: https://www.winpcap.org/ntar/draft/PCAP-DumpFileFormat.html
+// Reference: https://github.com/pcapng/pcapng
 //     Tests: https://github.com/hadrielk/pcapng-test-generator.git
 //   History:
+//   1.1   2018-05-12 K. Grover: Refactor.  Cleanup.  Fixed PB reader.
 //   1.0   2017-09-01 K. Grover: Alternate block background color.
 //   0.7   2016-03-11 K. Grover: Updated header.
 //   0.1   2015-10-06 K. Grover: Original Version.
 //
-// This is the new format used by Wireshark(libpcap).
-//------------------------------------------------
-
-// STATUS: Everything seems to work except EPB- some of the pcapng
-// files listed above fail to parse.  I could just comment that block
-// out in the main.
-
+// This is the default format used by Wireshark 1.20 and newer (libpcap).
+//
 // PCAPNG files are block oriented.  The Section Header block is
 // magic: it specifies the endianess of all data in _that_ block.
 // Sections of different endianess are allowed in the same file.
@@ -30,6 +26,8 @@
 // skipped.  In this decoder, we use a look-ahead read to get the
 // block_type, then create a block of that type (for known blocks) and
 // a generic block of type Block for all other blocks.
+//
+//------------------------------------------------
 
 // Base Types
 
@@ -37,45 +35,10 @@ typedef byte int8;
 typedef ubyte uint8;
 
 // ------------------------------------------------------------------------
-// Helper Routines
-// ------------------------------------------------------------------------
-
-/**
- * Generate a Block Label string.
- *
- * @param name the name of the block (possibly with extra data).
- * @param btype block_type enum value.
- * @param hasoptions indicate if this block has options.
- * @param istruncated indicate if this blocks data is truncated. (EPB).
- * @returns the generated block label string.
- */
-
-string BlockLabel(string name, uint32 btype, uint32 blen,
-                  int hasoptions, int istruncated)
-{
-    string res;
-    SPrintf(res, "%s (0x%X; Len=%d%s%s)", name, btype, blen,
-            (hasoptions) ? "; +Opt" : "", (istruncated) ? "; Truncated" : "");
-    return res;
-}
-
-/**
- * Return the given string, or "*UNKNOWN*" if it is empty.
- *
- * @param name the string to check
- * @returns the string, or "*UNKNOWN*".
- */
-
-string StrOrUnknown(string name)
-{
-    return (name != "") ? name : "*UNKNOWN*";
-}
-
-// ------------------------------------------------------------------------
 // Constants and Enums
 // ------------------------------------------------------------------------
 
-// Byte Order
+// Byte Order Magic
 
 typedef enum <uint32> {
     BOM = 0x1a2b3c4d,
@@ -181,14 +144,67 @@ typedef struct {
 } NRES_RECORD <read=Read_NRES_RECORD>;
 
 string Read_NRES_RECORD(NRES_RECORD &r) {
-    string name = EnumToString(r.record_type);
+    local string name = EnumToString(r.record_type);
 
     if (name != "") {
         return name;
     } else {
         string res;
-        SPrintf(res, "*UNKNOWN*: %d", r.record_type);
+        SPrintf(res, "*UNKNOWN*: %ud", r.record_type);
         return res;
+    }
+}
+
+// ------------------------------------------------------------------------
+// Helper Routines
+// ------------------------------------------------------------------------
+
+/**
+ * Generate a Block Label string.
+ *
+ * @param name the name of the block (possibly with extra data).
+ * @param btype block_type enum value.
+ * @param hasoptions indicate if this block has options.
+ * @param istruncated indicate if this blocks data is truncated. (EPB).
+ * @returns the generated block label string.
+ */
+
+string BlockLabel(string name, uint32 btype, uint32 blen,
+                  int hasoptions, int istruncated)
+{
+    string res;
+    SPrintf(res, "%s (0x%X; Len=%ud%s%s)", name, btype, blen,
+            (hasoptions) ? "; +Opt" : "", (istruncated) ? "; Truncated" : "");
+    return res;
+}
+
+/**
+ * Return the given string, or "*UNKNOWN*" if it is empty.
+ *
+ * @param name the string to check
+ * @returns the string, or "*UNKNOWN*".
+ */
+
+string StrOrUnknown(string name)
+{
+    return (name != "") ? name : "*UNKNOWN*";
+}
+
+void check_block_type(BLOCK_TYPE block_type, BLOCK_TYPE expected_block_type, string block_label)
+{
+    if (block_type != expected_block_type) {
+        Warning("Invalid %s Block", block_label);
+        return 1;
+    }
+}
+
+void check_block_lengths(uint32 block_length, uint32 block_lenght2, string block_label)
+{
+    if (block_length != block_length2) {
+        Warning("%s block length mismatch", block_label);
+        Printf("ERROR: %s block length mismatch (%ud != %ud)\n",
+               block_label, block_length, block_length2);
+        Exit(1);
     }
 }
 
@@ -219,7 +235,7 @@ typedef struct {
 } Options <read=Read_Option>;
 
 string Read_Option(Options &o) {
-    string res;
+    local string res;
 
     switch (o.option) {
     case 0:
@@ -230,18 +246,20 @@ string Read_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "option: %d", o.option);
+        SPrintf(res, "option: %ud", o.option);
         return res;
     }
 }
 
 string Read_SHB_Option(Options &o) {
     if (o.option <= 1) {
+        // Common options
         return Read_Option(o);
     }
 
-    string res;
+    local string res;
 
+    // Options for this block type
     switch (o.option) {
     // Section Header
     case 2:
@@ -256,18 +274,20 @@ string Read_SHB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "option: %d", o.option);
+        SPrintf(res, "unknown option: %ud", o.option);
         return res;
     }
 }
 
 string Read_IDB_Option(Options &o) {
     if (o.option <= 1) {
+        // Common options
         return Read_Option(o);
     }
 
-    string res;
+    local string res;
 
+    // Options for this block type
     switch (o.option) {
     // Interface Description
     case 2:
@@ -301,18 +321,20 @@ string Read_IDB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "option: %d", o.option);
+        SPrintf(res, "unknown option: %ud", o.option);
         return res;
     }
 }
 
 string Read_EPB_Option(Options &o) {
     if (o.option <= 1) {
+        // Common options
         return Read_Option(o);
     }
 
-    string res;
+    local string res;
 
+    // Common options
     switch (o.option) {
     // Enhanced Packet Block
     case 2:
@@ -324,18 +346,20 @@ string Read_EPB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "option: %d", o.option);
+        SPrintf(res, "unknown option: %ud", o.option);
         return res;
     }
 }
 
 string Read_PB_Option(Options &o) {
     if (o.option <= 1) {
+        // Common options
         return Read_Option(o);
     }
 
-    string res;
+    local string res;
 
+    // Options for this block type
     switch (o.option) {
     // Packet Block (Obsolete)
     case 2:
@@ -345,18 +369,20 @@ string Read_PB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "option: %d", o.option);
+        SPrintf(res, "unknown option: %ud", o.option);
         return res;
     }
 }
 
 string Read_NRB_Option(Options &o) {
     if (o.option <= 1) {
+        // Common options
         return Read_Option(o);
     }
 
-    string res;
+    local string res;
 
+    // Options for this block type
     switch (o.option) {
     // Name Resolution Block
     case 2:
@@ -368,18 +394,20 @@ string Read_NRB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "option: %d", o.option);
+        SPrintf(res, "unknown option: %ud", o.option);
         return res;
     }
 }
 
 string Read_ISB_Option(Options &o) {
     if (o.option <= 1) {
+        // Common options
         return Read_Option(o);
     }
 
-    string res;
+    local string res;
 
+    // Options for this block type
     switch (o.option) {
     // Interface Statistics Block
     case 2:
@@ -399,7 +427,7 @@ string Read_ISB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "option: %d", o.option);
+        SPrintf(res, "unknown option: %ud", o.option);
         return res;
     }
 }
@@ -435,7 +463,7 @@ typedef struct {
 } Block <read=Read_Block>;
 
 string Read_Block(Block &b) {
-    string name = StrOrUnknown(EnumToString(b.block_type));
+    local string name = StrOrUnknown(EnumToString(b.block_type));
     return BlockLabel(name, b.block_type, b.block_length, false, false);
 }
 
@@ -473,18 +501,17 @@ typedef struct {
 
     // Allocate the data for this section header
     BLOCK_TYPE  block_type <format=hex>;
-    if (block_type != BT_SECTION_HEADER) {
-        Warning("Not a valid PCAPNG File");
-        return 1;
-    }
+    check_block_type(block_type, BT_SECTION_HEADER, "Section Header");
     uint32  block_length;
     BYTE_ORDER  byte_order_magic <format=hex>;
-    uint16  major_version;
-    uint16  minor_version;
+    uint16  version_major;
+    uint16  version_minor;
     /**
      * Length for this entire section (excluding this SHB),
      * if it's -1 (0xFFFFFFFFFFFFFFFF), then it was not specified.
      */
+    // spec calls for this to be int64, but this works.
+    // They use -1 to test for not specified.
     uint64  section_length <read=Read_Section_Length>;
     if (block_length > 28) {
         // Allocate Options.
@@ -493,29 +520,26 @@ typedef struct {
         } while (options.option != 0);
     }
     uint32  block_length2;
-    if (block_length != block_length2) {
-        Warning("Section Header block length mismatch");
-        Printf("ERROR: Section Header block length mismatch (%d != %d)\n",
-               block_length, block_length2);
-        Exit(1);
-    }
+    check_block_lengths(block_length, block_length2, "Section Header");
 } SHB <read=Read_SHB>;
 
 string Read_SHB(SHB &b) {
-    string name;
-    SPrintf(name, "Section Header v%d.%d (%s)",
-            b.major_version, b.minor_version,
+    local string name;
+    SPrintf(name, "Section Header v%ud.%ud (%s)",
+            b.version_major, b.version_minor,
             b.isBE ? "BE" : "LE");
     return BlockLabel(name, b.block_type, b.block_length,
                       exists(b.options), false);
 }
 
 string Read_Section_Length(uint64 sl) {
+    // The spec calls for this value to be signed.  But using
+    // un-signed in 010editor, this test works correctly.
     if (sl == -1) {
         return "* Not Specified *";
     } else {
-        string res;
-        SPrintf(res, "%d", sl);
+        local string res;
+        SPrintf(res, "%ud", sl);
         return res;
     }
 }
@@ -526,10 +550,7 @@ string Read_Section_Length(uint64 sl) {
 
 typedef struct {
     BLOCK_TYPE  block_type <format=hex>;
-    if (block_type != BT_INTERFACE_DESC) {
-        Warning("Invalid Interface Description Block");
-        return 1;
-    }
+    check_block_type(block_type, BT_INTERFACE_DESC, "Interface Description");
     uint32  block_length;
     LINK_CODE  link_type;
     uint16  reserved;
@@ -541,16 +562,11 @@ typedef struct {
         } while (options.option != 0);
     }
     uint32  block_length2;
-    if (block_length != block_length2) {
-        Warning("Interface Description block length mismatch");
-        Printf("ERROR: Interface Description block length mismatch (%d != %d)\n",
-               block_length, block_length2);
-        Exit(1);
-    }
+    check_block_lengths(block_length, block_length2, "Interface Description");
 } IDB <read=Read_IDB>;
 
 string Read_IDB(IDB &b) {
-    string name;
+    local string name;
     SPrintf(name, "Interface Description (%s)", EnumToString(b.link_type));
     return BlockLabel(name, b.block_type, b.block_length,
                       exists(b.options), false);
@@ -562,10 +578,7 @@ string Read_IDB(IDB &b) {
 
 typedef struct {
     BLOCK_TYPE  block_type <format=hex>;
-    if (block_type != BT_ENHANCED_PACKET) {
-        Warning("Invalid Enhanced Packet Block");
-        return 1;
-    }
+    check_block_type(block_type, BT_ENHANCED_PACKET, "Enhanced Packet");
     uint32  block_length;
     uint32  interface_id;
     uint32  timestamp_high;
@@ -587,12 +600,7 @@ typedef struct {
         } while (options.option != 0);
     }
     uint32  block_length2;
-    if (block_length != block_length2) {
-        Warning("Enhanced Packet block length mismatch");
-        Printf("ERROR: Enhanced Packet block length mismatch (%d != %d)\n",
-               block_length, block_length2);
-        Exit(1);
-    }
+    check_block_lengths(block_length, block_length2, "Enhanced Packet");
 } EPB <read=Read_EPB>;
 
 string Read_EPB(EPB &b) {
@@ -606,10 +614,7 @@ string Read_EPB(EPB &b) {
 
 typedef struct {
     BLOCK_TYPE  block_type <format=hex>;
-    if (block_type != BT_NAME_RESOLUTION) {
-        Warning("Invalid Name Resolution Block");
-        return 1;
-    }
+    check_block_type(block_type, BT_NAME_RESOLUTION, "Name Resolution");
     uint32  block_length;
 
     // Records
@@ -627,12 +632,7 @@ typedef struct {
         } while (options.option != 0);
     }
     uint32  block_length2;
-    if (block_length != block_length2) {
-        Warning("Name Resolution block length mismatch");
-        Printf("ERROR: Name Resolution block length mismatch (%d != %d)\n",
-               block_length, block_length2);
-        Exit(1);
-    }
+    check_block_lengths(block_length, block_length2, "Name Resolution");
 } NRB <read=Read_NRB>;
 
 string Read_NRB(NRB &b) {
@@ -646,10 +646,7 @@ string Read_NRB(NRB &b) {
 
 typedef struct {
     BLOCK_TYPE  block_type <format=hex>;
-    if (block_type != BT_INTERFACE_STATS) {
-        Warning("Invalid Interface Statistics Block");
-        return 1;
-    }
+    check_block_type(block_type, BT_INTERFACE_STATS, "Interface Statistics");
     uint32  block_length;
     uint32  interface_id;
     uint32  timestamp_high;
@@ -661,12 +658,7 @@ typedef struct {
         } while (options.option != 0);
     }
     uint32  block_length2;
-    if (block_length != block_length2) {
-        Warning("Interface Statistics block length mismatch");
-        Printf("ERROR: Interface Statistics block length mismatch (%d != %d)\n",
-               block_length, block_length2);
-        Exit(1);
-    }
+    check_block_lengths(block_length, block_length2, "Interface Statistics");
 } ISB <read=Read_ISB>;
 
 string Read_ISB(ISB &b) {
@@ -680,26 +672,14 @@ string Read_ISB(ISB &b) {
 
 typedef struct {
     BLOCK_TYPE block_type <format=hex>;
-    if (block_type != BT_SIMPLE_PACKET) {
-        Warning("Invalid Simple Packet Block");
-        return 1;
-    }
+    check_block_type(block_type, BT_SIMPLE_PACKET, "Simple Packet");
     uint32 block_length;
-    uint32 packet_length;
+    uint32 original_packet_length;
 
-    local uint32 data_length;
-    if (last_snap_length > 0) {
-        // TODO Is it an error if snap_length is 0? I think so.
-
-        // The data_length is the minimum of the packet_length (specified
-        // here) and the snap_length specified in the last Interface
-        // Description Block.
-        data_length = Min(packet_length, last_snap_length);
-    } else {
-        Printf("Warning: SPB: last_snap_length 0\n");
-        data_length = block_length - 16;
+    local uint32 data_length = original_packet_length;
+    if (last_snap_length != 0) {
+        data_length = Min(original_packet_length, last_snap_length);
     }
-
     if (data_length > 0) {
         uint8  data[data_length];
     }
@@ -709,12 +689,7 @@ typedef struct {
         uint8 padding[4 - padbytes];
     }
     uint32 block_length2;
-    if (block_length != block_length2) {
-        Warning("Simple Packet block length mismatch");
-        Printf("ERROR: Simple Packet block length mismatch (%d != %d)\n",
-               block_length, block_length2);
-        Exit(1);
-    }
+    check_block_lengths(block_length, block_length2, "Simple Packet");
 } SPB <read=Read_SPB>;
 
 string Read_SPB(SPB &b) {
@@ -724,17 +699,12 @@ string Read_SPB(SPB &b) {
 
 // ------------------------------------------------------------------------
 // Packet Block (Obsolete)
-// TODO: Completely UNTESTED (Need Example!)
 // ------------------------------------------------------------------------
 
 typedef struct {
     BLOCK_TYPE block_type <format=hex>;
-    if (block_type != BT_PACKET) {
-        Warning("Invalid Packet Block");
-        return 1;
-    }
+    check_block_type(block_type, BT_PACKET, "Packet");
     uint32 block_length;
-    uint32 packet_length;
     uint16 interface_id;
     uint16 drops_count;
     uint32 timestamp_high;
@@ -757,12 +727,7 @@ typedef struct {
         } while (options.option != 0);
     }
     uint32  block_length2;
-    if (block_length != block_length2) {
-        Warning("Packet block length mismatch");
-        Printf("ERROR: Packet block length mismatch (%d != %d)\n",
-               block_length, block_length2);
-        Exit(1);
-    }
+    check_block_lengths(block_length, block_length2, "Packet");
 } PB <read=Read_PB>;
 
 string Read_PB(PB &b) {
