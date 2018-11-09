@@ -3,7 +3,7 @@
 //
 //      File: InspectorDates.bt
 //   Authors: SweetScape Software
-//   Version: 1.1
+//   Version: 1.2
 //   Purpose: Demonstrates how to add a series of 
 //            dates to the Auto Inspector. Includes:
 //            WebkitTime (64-bit int, microseconds since 01/01/1601),
@@ -17,6 +17,7 @@
 // File Mask: 
 //  ID Bytes: 
 //   History: 
+//   1.2   2018-10-15 K. Grover: Corrected JavaTime comment.
 //   1.1   2016-02-12 SweetScape Software: Updated header for repository submission.
 //   1.0   SweetScape Software: Initial release.
 //------------------------------------------------
@@ -128,7 +129,7 @@ int PRTimeWrite( PRTime &t, string value )
 
 //----------------------------------------------------------------
 // JavaTime
-//      64-bit integer, number of microseconds since 01/01/1970 00:00:00
+//      64-bit integer, number of milliseconds since 01/01/1970 00:00:00
 typedef uint64 JavaTime <read=JavaTimeRead, write=JavaTimeWrite>;
 FSeek( pos ); JavaTime _jt <name="JavaTime">;
 string JavaTimeRead( JavaTime t )

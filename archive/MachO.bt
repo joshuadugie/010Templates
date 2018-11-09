@@ -4,13 +4,14 @@
 //      File: MachO.bt
 //   Authors: Tim "diff" Strazzere
 //    E-mail: diff@lookout.com, strazz@gmail.com
-//   Version: 1.4
+//   Version: 1.5
 //   Purpose: Quick template for parsing Mach-o binaries,
 //            including Mac OS X executables, .o and .dylib files. 
 //  Category: Executable
 // File Mask: *,*.o,*.dylib
 //  ID Bytes: CF FA ED FE, CE FA ED FE, BE BA FE CA, CA FE BA BE
 //   History: 
+//   1.5   2018-11-09 swigger at gmail.com: support LC_BUILD_VERSION load command.
 //   1.4   2017-03-17 swigger at gmail.com: enable encryption segment 64.
 //   1.3   2016-06-08 N Moinvaziri: Fixed definition of section_64. Offset should have been uint64 and reserved3 missing.
 //   1.2   2016-02-12 SweetScape Software: Updated header for repository submission.
@@ -29,8 +30,7 @@
 //    (Related to an 010Editor template bug)
 //------------------------------------------------
 
-// Mach-o's should be Little Endian only -- except for the fat_header/fat_arch
-LittleEndian();
+// Mach-o's should be Little Endian only -- except for the fat_header/fat_archLittleEndian();
 
 typedef enum <uint> {
     MACHO_32        = 0xFEEDFACE, // 32-bit mach object file
@@ -333,6 +333,7 @@ typedef enum <uint> {
     SOURCE_VERSION          = 0x2A,
     DYLIB_CODE_SIGN_DRS     = 0x2B,
     ENCRYPTION_INFO_64 = 0x2c,
+    LC_BUILD_VERSION = 0x32,
 } LoadCommandType <read=LoadCommandTypeRead>;
 
 string LoadCommandTypeRead(LoadCommandType &loadCommandType) {
@@ -427,6 +428,8 @@ string LoadCommandTypeRead(LoadCommandType &loadCommandType) {
             return "DYLIB_CODE_SIGN_DRS";
         case ENCRYPTION_INFO_64:
             return "ENCRYPTION_INFO_64";
+        case LC_BUILD_VERSION:
+            return "LC_BUILD_VERSION";
         default :
             return "Error";
     }
@@ -539,6 +542,12 @@ string VersionRead(Version &version) {
     return version_string;
 }
 
+typedef struct
+{
+    uint32 tool;      // enum for the tool
+    Version version;   // version of the tool
+}build_tool_version;
+
 typedef struct {
     //LoadCommandHead loadCommandHead <comment="Load command type and size">;
     LoadCommandType command;
@@ -564,9 +573,9 @@ typedef struct {
         FSkip(command_size);
         break;
     case SYM_TAB :
-        uint32 symbol_table_offset <comment="Symbol table offsett address">;
+        uint32 symbol_table_offset <format=hex, comment="Symbol table offsett address">;
         uint32 number_of_symbol_table_entries <comment="Number of symbol table entries">;
-        uint32 string_table_offset <comment="String table offset">;
+        uint32 string_table_offset <format=hex, comment="String table offset">;
         uint32 string_table_size <comment="String table size in bytes">;
         break;
     case DYLD_INFO :
@@ -835,6 +844,16 @@ typedef struct {
         uint32	cryptid;	/* which enryption system, 0 means not-encrypted yet */
         uint32	pad;		/* padding to make this struct's size a multiple of 8 */
         break;
+    case LC_BUILD_VERSION:
+        uint32 platform;  // platform
+        Version minos;     // X.Y.Z is encoded in nibbles xxxx.yy.zz
+        Version sdk;       // X.Y.Z is encoded in nibbles xxxx.yy.zz
+        uint32 ntools;
+        if (ntools > 0)
+        {
+            build_tool_version tools[ntools];
+        }
+        break;  
     default :
         Warning("Hit an unknown or unsupported load command : [%d]", command);
         Exit(-1);

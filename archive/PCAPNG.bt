@@ -1,9 +1,9 @@
-//------------------------------------------------
-//--- 010 Editor Binary Template
+// ------------------------------------------------------------------------
+// --- 010 Editor Binary Template
 //
 //      File: PCAPNG.bt
 //   Authors: Kevin O. Grover
-//   Version: 1.1
+//   Version: 1.3
 //   Purpose: Parse a PCAPNG Packet Capture file.
 //  Category: Network
 // File Mask: *.pcapng,*.ntar
@@ -11,6 +11,8 @@
 // Reference: https://github.com/pcapng/pcapng
 //     Tests: https://github.com/hadrielk/pcapng-test-generator.git
 //   History:
+//   1.3   2018-06-09 K. Grover: Pad based on data size.
+//   1.2   2018-06-08 K. Grover: Custom Blocks.  More block types.
 //   1.1   2018-05-12 K. Grover: Refactor.  Cleanup.  Fixed PB reader.
 //   1.0   2017-09-01 K. Grover: Alternate block background color.
 //   0.7   2016-03-11 K. Grover: Updated header.
@@ -19,15 +21,19 @@
 // This is the default format used by Wireshark 1.20 and newer (libpcap).
 //
 // PCAPNG files are block oriented.  The Section Header block is
-// magic: it specifies the endianess of all data in _that_ block.
-// Sections of different endianess are allowed in the same file.
+// magic: it specifies the endianess of all data in _that_ section
+// (until the next SHB).  Sections of different endianess are allowed
+// in the same file.
+//
+// The section header block (SHB) is supposed to be the first block,
+// followed by the Interface Description Block (IDB), which can set
+// time resolution details.  This decoder does not check for that.
 //
 // The Blocks all have the same format: unknown blocks can be read and
 // skipped.  In this decoder, we use a look-ahead read to get the
 // block_type, then create a block of that type (for known blocks) and
 // a generic block of type Block for all other blocks.
-//
-//------------------------------------------------
+// ------------------------------------------------------------------------
 
 // Base Types
 
@@ -48,15 +54,44 @@ typedef enum <uint32> {
 // Block Types
 
 typedef enum <uint32> {
-    BT_INTERFACE_DESC =   0x00000001,  // Interface Description (Mandatory)
-    BT_PACKET =           0x00000002,  // Packet (Obsolete)
-    BT_SIMPLE_PACKET =    0x00000003,  // Simple Packet (Optional)
-    BT_NAME_RESOLUTION =  0x00000004,  // Name Resolution (Optional)
-    BT_INTERFACE_STATS =  0x00000005,  // Interface Statistics (Optional)
-    BT_ENHANCED_PACKET =  0x00000006,  // Enhanced Packet (Optional)
-    BT_SECTION_HEADER =   0x0a0d0d0a   // Section Header (Mandatory)
-                          // NOTE: The Section Header Block type will
-                          // read the same in Big and Little Endian.
+    // NOTE: The Section Header Block type will read the same
+    //       in Big and Little Endian.
+    BT_SECTION_HEADER  = 0x0a0d0d0a, // Section Header (Mandatory)
+    BT_INTERFACE_DESC  = 0x00000001, // Interface Description (Mandatory)
+    BT_PACKET          = 0x00000002, // Packet (Obsolete)
+    BT_SIMPLE_PACKET   = 0x00000003, // Simple Packet (Optional)
+    BT_NAME_RESOLUTION = 0x00000004, // Name Resolution (Optional)
+    BT_INTERFACE_STATS = 0x00000005, // Interface Statistics (Optional)
+    BT_ENHANCED_PACKET = 0x00000006, // Enhanced Packet (Optional)
+    BT_CUSTOM          = 0x00000BAD, // Custom Block (Optional, Copiable)
+    BT_CUSTOM_NOCOPY   = 0x40000BAD, // Custom Block (Optional, Not Copiable)
+
+    // In specification, but no decoder here
+    BT_RESERVED          = 0x00000000, // Reserved
+    BT_IRIG_TIMESTAMP    = 0x00000007, // IRIG Time Stamp
+    BT_AFDX_INFO         = 0x00000008, // ARINC 428 AFDX Encap. Info. Block
+    BT_HONE_MACHINE      = 0x00000101, // Hone Project Machine Info
+    BT_HONE_CONN_EVENT   = 0x00000102, // Hone Project Connection Even
+    BT_SYSDIG_MACHINE    = 0x00000201, // Sysdig Machine Info
+    BT_SYSDIG_PROCESS_V1 = 0x00000202, // Sysdig Proces Info (v1)
+    BT_SYSDIG_FD_LIST    = 0x00000203, // Sysdig FD List
+    BT_SYSDIG_EVENT      = 0x00000204, // Sysdig Event
+    BT_SYSDIG_IFLIST     = 0x00000205, // Sysdig Inteface List
+    BT_SYSDIG_UESRLIST   = 0x00000206, // Sysdig User List
+    BT_SYSDIG_PROCESS_V2 = 0x00000207, // Sysdig Process Info (v2)
+    BT_SYSDIG_EVENT_FL   = 0x00000208, // Sysdig Event Block with Flags
+    BT_SYSDIG_PROCESS_V3 = 0x00000209, // Sysdig Process Info (v3)
+    BT_SYSDIG_PROCESS_V4 = 0x00000210, // Sysdig Process Info (v4)
+    BT_SYSDIG_PROCESS_V5 = 0x00000211, // Sysdig Process Info (v5)
+    BT_SYSDIG_PROCESS_V6 = 0x00000212, // Sysdig Process Info (v6)
+    BT_SYSDIG_PROCESS_V7 = 0x00000213, // Sysdig Process Info (v7)
+
+    // TODO: How to handle these?
+    // 0x0A0D0A00-0x0A0D0AFF   // Reserved (corrupt by HTTP text tfer)
+    // 0x000A0D0A-0xFF0A0D0A   // Reserved (corrupt by HTTP text tfer)
+    // 0x000A0D0D-0xFF0A0D0D   // Reserved (corrupt by HTTP text tfer)
+    // 0x0D0D0A00-0x0D0D0AFF   // Reserved (corrupt by FTP text tfer)
+    // 0x80000000-0xFFFFFFFF   // Reserved for local use.
 } BLOCK_TYPE;
 
 // Link Types
@@ -135,10 +170,12 @@ typedef struct {
     uint16     record_length;
     if (record_length > 0) {
         uint8 data[record_length];
+
         // Align to 32 bit (4 byte) boundary (if needed)
-        local int64 pos = FTell() & 0b11;
-        if (pos) {
-            uint8 padding[4 - pos];
+        local int padbytes = record_length & 0b11;
+        if (padbytes) {
+            padbytes = 4 - padbytes;
+            uint8 padding[padbytes];
         }
     }
 } NRES_RECORD <read=Read_NRES_RECORD>;
@@ -150,7 +187,7 @@ string Read_NRES_RECORD(NRES_RECORD &r) {
         return name;
     } else {
         string res;
-        SPrintf(res, "*UNKNOWN*: %ud", r.record_type);
+        SPrintf(res, "*UNKNOWN*: %u", r.record_type);
         return res;
     }
 }
@@ -169,11 +206,11 @@ string Read_NRES_RECORD(NRES_RECORD &r) {
  * @returns the generated block label string.
  */
 
-string BlockLabel(string name, uint32 btype, uint32 blen,
+string BlockLabel(string name, uint32 btype,
                   int hasoptions, int istruncated)
 {
     string res;
-    SPrintf(res, "%s (0x%X; Len=%ud%s%s)", name, btype, blen,
+    SPrintf(res, "%s (0x%X%s%s)", name, btype,
             (hasoptions) ? "; +Opt" : "", (istruncated) ? "; Truncated" : "");
     return res;
 }
@@ -190,22 +227,51 @@ string StrOrUnknown(string name)
     return (name != "") ? name : "*UNKNOWN*";
 }
 
-void check_block_type(BLOCK_TYPE block_type, BLOCK_TYPE expected_block_type, string block_label)
-{
-    if (block_type != expected_block_type) {
-        Warning("Invalid %s Block", block_label);
-        return 1;
-    }
-}
-
 void check_block_lengths(uint32 block_length, uint32 block_lenght2, string block_label)
 {
     if (block_length != block_length2) {
         Warning("%s block length mismatch", block_label);
-        Printf("ERROR: %s block length mismatch (%ud != %ud)\n",
+        Printf("ERROR: %s block length mismatch (%u != %u)\n",
                block_label, block_length, block_length2);
         Exit(1);
     }
+}
+
+// ------------------------------------------------------------------------
+// TimeStamp - 2 32bit words.   Time Units since Epoch.
+// ------------------------------------------------------------------------
+// Time Stamps are stored as two separate 32 bit numbers.
+// They are affected by endianess, so must be read independently.
+// The resolution is determined by options in the Interface Description
+// Block.  Default is micro seconds (10^-6).
+//
+// Epoch = 1970-01-01 00:00:00 UTC
+// ------------------------------------------------------------------------
+
+// NOTE: The fractional value does not match the number in Wireshark.  Also
+//       Wireshark is scaling to local timezone.  I do not.
+
+
+// These can be changed in IDB options.  These are the defaults.
+// TODO: Function Set_Time_Scale_Defaults() and called from IDB processing also!
+local uint8  tsresol_base = 10;    // 10 or 2
+local uint8  tsresol = 6;
+local int64  tsoffset = 0;
+local double tsscale = Pow(tsresol_base, -tsresol);
+
+typedef struct {
+    uint32  timestamp_high;
+    uint32  timestamp_low;
+} TimeStamp <read=Read_TimeStamp>;
+
+string Read_TimeStamp(TimeStamp &ts) {
+    local string res;
+    local double seconds = (((int64)ts.timestamp_high * (int64)0xFFFFFFFF + ts.timestamp_low) + tsoffset) * tsscale;
+    local time_t timet = (time_t) seconds;
+    local double rem = seconds - (uint32)timet;
+    // NOTE: This is fragile.  TimeToString wants time_t which is 32 bits
+    SPrintf(res, "%s + %.9lf  UTC", TimeTToString(timet, "yyyy-MM-dd hh:mm:ss"), rem);
+    return res;
 }
 
 // ------------------------------------------------------------------------
@@ -224,13 +290,15 @@ void check_block_lengths(uint32 block_length, uint32 block_lenght2, string block
 typedef struct {
     uint16 option;
     uint16 length;
-    if (length > 0)
+    if (length > 0) {
         uint8  data[length];
-    // Align to 32 bit (4 byte) boundary (if needed)
-    // NOTE: This should never happen if length == 0.
-    local int64 pos = FTell() & 0b11;
-    if (pos) {
-        uint8 padding[4 - pos];
+
+        // Align to 32 bit (4 byte) boundary (if needed)
+        local int padbytes = length & 0b11;
+        if (padbytes) {
+            padbytes = 4 - padbytes;
+            uint8 padding[padbytes];
+        }
     }
 } Options <read=Read_Option>;
 
@@ -246,7 +314,7 @@ string Read_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "option: %ud", o.option);
+        SPrintf(res, "option: %u", o.option);
         return res;
     }
 }
@@ -274,7 +342,7 @@ string Read_SHB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "unknown option: %ud", o.option);
+        SPrintf(res, "unknown option: %u", o.option);
         return res;
     }
 }
@@ -297,31 +365,53 @@ string Read_IDB_Option(Options &o) {
         SPrintf(res, "if_description: %s", o.data);
         return res;
     case 4:
+        // TODO: 4 bytes IP addr, 4 bytes netmask
+        //       not 32bit numbers, not affected by endianess
         return "if_IPv4addr";
     case 5:
+        // TODO: 16 octets address, 1 oct prefix length
         return "if_IPv6addr";
     case 6:
+        // TODO: 48 bits (6 octets)
         return "if_MACaddr";
     case 7:
         return "if_EUIaddr";
     case 8:
         return "if_speed";
     case 9:
-        return "if_tsresol";
+        // Process Time Stamp Resolution options
+        tsresol = o.data[0];
+        if (tsresol & 0x80) {
+            // Remove high bit and set base
+            tsresol = tsresol & 0x7f;
+            tsresol_base = 2;
+        }
+        else {
+            // Otherwise, use default base
+            tsresol_base = 10;
+        }
+        tsscale = Pow(tsresol_base, -tsresol);
+        SPrintf(res, "if_tsresol: pow(%d, -%d) seconds", tsresol_base, tsresol);
+        return res;
     case 10:
+        // TODO: Do I need to remember/use this?
         return "if_tzone";
     case 11:
+        // This is not a string.  Format unclear.  Has leading \0.
         return "if_filter";
     case 12:
-        return "if_os";
+        SPrintf(res, "if_os: %s", o.data);
+        return res;
     case 13:
+        // 8 bit signed number
         return "if_fcslen";
     case 14:
+        // TODO: Decode (int64) and save.
         return "if_tsoffset";
 
     // Unknown
     default:
-        SPrintf(res, "unknown option: %ud", o.option);
+        SPrintf(res, "unknown option: %u", o.option);
         return res;
     }
 }
@@ -346,7 +436,7 @@ string Read_EPB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "unknown option: %ud", o.option);
+        SPrintf(res, "unknown option: %u", o.option);
         return res;
     }
 }
@@ -369,7 +459,7 @@ string Read_PB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "unknown option: %ud", o.option);
+        SPrintf(res, "unknown option: %u", o.option);
         return res;
     }
 }
@@ -386,7 +476,8 @@ string Read_NRB_Option(Options &o) {
     switch (o.option) {
     // Name Resolution Block
     case 2:
-        return "ns_dnsname";
+        SPrintf(res, "ns_dnsname: %s", o.data);
+        return res;
     case 3:
         return "ns_dnsIP4addr";
     case 4:
@@ -394,7 +485,7 @@ string Read_NRB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "unknown option: %ud", o.option);
+        SPrintf(res, "unknown option: %u", o.option);
         return res;
     }
 }
@@ -427,7 +518,7 @@ string Read_ISB_Option(Options &o) {
 
     // Unknown
     default:
-        SPrintf(res, "unknown option: %ud", o.option);
+        SPrintf(res, "unknown option: %u", o.option);
         return res;
     }
 }
@@ -447,7 +538,6 @@ string Read_ISB_Option(Options &o) {
 // ------------------------------------------------------------------------
 
 typedef struct {
-    local uint64 pos = FTell();  // For alignment error later
     BLOCK_TYPE block_type <format=hex>;
     uint32 block_length;
     if (block_length > 12)
@@ -455,8 +545,8 @@ typedef struct {
     // Should never need to align a generic Block because
     // length is the total packet length: internal items should
     // already be aligned.
-    local uint8 isAligned = ((FTell() & 0b11) == 0);
-    if (!isAligned) {
+    if ((block_length & 0b11) != 0) {
+        // This should never happen according to the spec.
         Printf("WARNING: %08x: Block data not 4-byte aligned\n", pos);
     }
     uint32 block_length2;
@@ -464,7 +554,7 @@ typedef struct {
 
 string Read_Block(Block &b) {
     local string name = StrOrUnknown(EnumToString(b.block_type));
-    return BlockLabel(name, b.block_type, b.block_length, false, false);
+    return BlockLabel(name, b.block_type, false, false);
 }
 
 // ------------------------------------------------------------------------
@@ -501,7 +591,6 @@ typedef struct {
 
     // Allocate the data for this section header
     BLOCK_TYPE  block_type <format=hex>;
-    check_block_type(block_type, BT_SECTION_HEADER, "Section Header");
     uint32  block_length;
     BYTE_ORDER  byte_order_magic <format=hex>;
     uint16  version_major;
@@ -525,11 +614,10 @@ typedef struct {
 
 string Read_SHB(SHB &b) {
     local string name;
-    SPrintf(name, "Section Header v%ud.%ud (%s)",
+    SPrintf(name, "Section Header v%u.%u (%s)",
             b.version_major, b.version_minor,
             b.isBE ? "BE" : "LE");
-    return BlockLabel(name, b.block_type, b.block_length,
-                      exists(b.options), false);
+    return BlockLabel(name, b.block_type, exists(b.options), false);
 }
 
 string Read_Section_Length(uint64 sl) {
@@ -539,7 +627,7 @@ string Read_Section_Length(uint64 sl) {
         return "* Not Specified *";
     } else {
         local string res;
-        SPrintf(res, "%ud", sl);
+        SPrintf(res, "%u", sl);
         return res;
     }
 }
@@ -550,7 +638,6 @@ string Read_Section_Length(uint64 sl) {
 
 typedef struct {
     BLOCK_TYPE  block_type <format=hex>;
-    check_block_type(block_type, BT_INTERFACE_DESC, "Interface Description");
     uint32  block_length;
     LINK_CODE  link_type;
     uint16  reserved;
@@ -568,8 +655,7 @@ typedef struct {
 string Read_IDB(IDB &b) {
     local string name;
     SPrintf(name, "Interface Description (%s)", EnumToString(b.link_type));
-    return BlockLabel(name, b.block_type, b.block_length,
-                      exists(b.options), false);
+    return BlockLabel(name, b.block_type, exists(b.options), false);
 }
 
 // ------------------------------------------------------------------------
@@ -578,20 +664,20 @@ string Read_IDB(IDB &b) {
 
 typedef struct {
     BLOCK_TYPE  block_type <format=hex>;
-    check_block_type(block_type, BT_ENHANCED_PACKET, "Enhanced Packet");
     uint32  block_length;
     uint32  interface_id;
-    uint32  timestamp_high;
-    uint32  timestamp_low;
+    TimeStamp   timestamp;
     uint32  len_capture;
     uint32  len_packet;
-    if (len_capture)
+    if (len_capture) {
         uint8   data[len_capture];
-    // Align to 32 bits
-    local int64 padbytes = FTell() & 0b11;
-    if (padbytes) {
-        padbytes = 4 - padbytes;
-        uint8 padding[padbytes];
+
+        // Align to 32 bits
+        local int padbytes = len_capture & 0b11;
+        if (padbytes) {
+            padbytes = 4 - padbytes;
+            uint8 padding[padbytes];
+        }
     }
     if (block_length > (32 + len_capture + padbytes)) {
         // Allocate Options.
@@ -604,7 +690,7 @@ typedef struct {
 } EPB <read=Read_EPB>;
 
 string Read_EPB(EPB &b) {
-    return BlockLabel("Enhanced Packet", b.block_type, b.block_length,
+    return BlockLabel("Enhanced Packet", b.block_type,
                       exists(b.options), b.len_capture != b.len_packet);
 }
 
@@ -614,7 +700,6 @@ string Read_EPB(EPB &b) {
 
 typedef struct {
     BLOCK_TYPE  block_type <format=hex>;
-    check_block_type(block_type, BT_NAME_RESOLUTION, "Name Resolution");
     uint32  block_length;
 
     // Records
@@ -636,7 +721,7 @@ typedef struct {
 } NRB <read=Read_NRB>;
 
 string Read_NRB(NRB &b) {
-    return BlockLabel("Name Resolution", b.block_type, b.block_length,
+    return BlockLabel("Name Resolution", b.block_type,
                       exists(b.options), false);
 }
 
@@ -646,11 +731,9 @@ string Read_NRB(NRB &b) {
 
 typedef struct {
     BLOCK_TYPE  block_type <format=hex>;
-    check_block_type(block_type, BT_INTERFACE_STATS, "Interface Statistics");
     uint32  block_length;
     uint32  interface_id;
-    uint32  timestamp_high;
-    uint32  timestamp_low;
+    TimeStamp  timestamp;
     if (block_length > 24) {
         // Allocate Options.
         do {
@@ -662,7 +745,7 @@ typedef struct {
 } ISB <read=Read_ISB>;
 
 string Read_ISB(ISB &b) {
-    return BlockLabel("Interface Statistics", b.block_type, b.block_length,
+    return BlockLabel("Interface Statistics", b.block_type,
                       exists(b.options), false);
 }
 
@@ -672,7 +755,6 @@ string Read_ISB(ISB &b) {
 
 typedef struct {
     BLOCK_TYPE block_type <format=hex>;
-    check_block_type(block_type, BT_SIMPLE_PACKET, "Simple Packet");
     uint32 block_length;
     uint32 original_packet_length;
 
@@ -682,18 +764,20 @@ typedef struct {
     }
     if (data_length > 0) {
         uint8  data[data_length];
-    }
-    // Align to 32 bit (4 byte) boundary (if needed)
-    local int64 padbytes = FTell() & 0b11;
-    if (padbytes) {
-        uint8 padding[4 - padbytes];
+
+        // Align to 32 bit (4 byte) boundary (if needed)
+        local int padbytes = data_length & 0b11;
+        if (padbytes) {
+            padbytes = 4 - padbytes;
+            uint8 padding[padbytes];
+        }
     }
     uint32 block_length2;
     check_block_lengths(block_length, block_length2, "Simple Packet");
 } SPB <read=Read_SPB>;
 
 string Read_SPB(SPB &b) {
-    return BlockLabel("Simple Packet", b.block_type, b.block_length,
+    return BlockLabel("Simple Packet", b.block_type,
                       exists(b.options), false);
 }
 
@@ -703,21 +787,21 @@ string Read_SPB(SPB &b) {
 
 typedef struct {
     BLOCK_TYPE block_type <format=hex>;
-    check_block_type(block_type, BT_PACKET, "Packet");
     uint32 block_length;
     uint16 interface_id;
     uint16 drops_count;
-    uint32 timestamp_high;
-    uint32 timestamp_low;
+    TimeStamp  timestamp;
     uint32 len_capture;
     uint32 len_packet;
     if (len_capture) {
         uint8 data[len_capture];
-    }
-    // Align to 32 bit (4 byte) boundary (if needed)
-    local int64 padbytes = FTell() & 0b11;
-    if (padbytes) {
-        uint8 padding[4 - padbytes];
+
+        // Align to 32 bit (4 byte) boundary (if needed)
+        local int padbytes = len_capture & 0b11;
+        if (padbytes) {
+            padbytes = 4 - padbytes;
+            uint8 padding[padbytes];
+        }
     }
     // Options
     if (block_length > (32 + len_capture + padbytes)) {
@@ -731,8 +815,30 @@ typedef struct {
 } PB <read=Read_PB>;
 
 string Read_PB(PB &b) {
-    return BlockLabel("Packet", b.block_type, b.block_length,
+    return BlockLabel("Packet", b.block_type,
                       exists(b.options), false);
+}
+
+// ------------------------------------------------------------------------
+// Custom Block (Optional)
+// Two flavors: one copiable, one not.
+// ------------------------------------------------------------------------
+// TODO: Not Tested!
+
+typedef struct {
+    BLOCK_TYPE  block_type <format=hex>;
+    uint32  block_length;
+    uint32  iana_pen;           // Private Enterprise Number (IANA assigned)
+    if (block_length > 16)
+        uint8  custom_data[block_length - 16];
+    uint32  block_length2;
+    check_block_lengths(block_length, block_length2, "Interface Description");
+} CB <read=Read_CB>;
+
+string Read_CB(IDB &b) {
+    local string name;
+    SPrintf(name, "Custom (%s)", EnumToString(b.link_type));
+    return BlockLabel(name, b.block_type, false, false);
 }
 
 // ------------------------------------------------------------------------
@@ -748,29 +854,44 @@ while( !FEof() ) {
     SetBackColor( (block_count++ % 2) ? cLtGray : cNone );
     switch (block_type) {
     case BT_SECTION_HEADER:
-        SHB b;
+        SHB b <name="SHB">;
         break;
     case BT_INTERFACE_DESC:
-        IDB b;
+        // Set default TIME scales.   These can be changed
+        // by options in this block.
+        tsresol_base = 10;
+        tsresol = 6;
+        tsscale = Pow(tsresol_base, -tsresol);
+        tsoffset = 0;
+
+        IDB b <name="IDB">;
+
+        // Save for future use
         last_snap_length = b.snap_length;
         break;
     case BT_NAME_RESOLUTION:
-        NRB b;
+        NRB b <name="NRB">;
         break;
     case BT_ENHANCED_PACKET:
-        EPB b;
+        EPB b <name="EPB">;
         break;
     case BT_PACKET:
-        PB b;
+        PB b <name="PB">;
         break;
     case BT_INTERFACE_STATS:
-        ISB b;
+        ISB b <name="ISB">;
         break;
     case BT_SIMPLE_PACKET:
-        SPB b;
+        SPB b <name="SPB">;
+        break;
+    case BT_CUSTOM:
+        CB b <name="CB">;
+        break;
+    case BT_CUSTOM_NOCOPY:
+        CB b <name="CB_NOCOPY">;
         break;
     default:
         // Not a known type, use a generic Block
-        Block b;
+        Block b <name="Block">;
     }
 }
