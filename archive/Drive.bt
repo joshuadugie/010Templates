@@ -3,7 +3,7 @@
 //
 //      File: Drive.bt
 //   Authors: SweetScape Software, Benjamin Vernoux
-//   Version: 2.2
+//   Version: 2.4
 //   Purpose: Parse logical and physical drives including 
 //            MBR, FAT16, FAT32, HFS, NTFS and extended partitions.
 //            Can display subdirectories and data for individual
@@ -13,6 +13,7 @@
 // File Mask: Drive*,Physical*
 //  ID Bytes: [+510] 55 AA,[+1024] 48 2B,[+1024] 48 58
 //   History: 
+//   2.4   2018-11-xx HenryGab: Fix file system recognition sequence, support partition-less media
 //   2.2   2018-10-23 HenryGab: Fix multiple bugs in FAT16/FAT32.
 //   2.0   2016-07-06 SweetScape Software: Added support for HFS drives (macOS/iOS).
 //   1.1   2016-06-14 SweetScape Software: Added support for EFI partitions.
@@ -34,6 +35,13 @@
 LittleEndian(); 
 local int NumDrives = 0;
 
+typedef enum <int> {
+    boolean_false = 0,
+    boolean_true = 1,
+    boolean_true_negative_one = -1,
+    boolean_just_use_true_and_false = 0xbaadf00d
+} boolean;
+
 //################################################################
 // MBR - Master Boot Record (contains partition information)
 //################################################################
@@ -41,184 +49,198 @@ local int NumDrives = 0;
 // Partition Types
 typedef enum <uchar>
 {
-   EMPTY                          = 0,
-   FAT_12                         = 1,
-   XENIX_ROOT                     = 2,
-   XENIX_USR                      = 3,
-   FAT_16_INF32MB                 = 4,
-   EXTENDED                       = 5,
-   FAT_16                         = 6,
-   NTFS_HPFS                      = 7,
-   AIX                            = 8,
-   AIX_BOOT                       = 9,
-   OS2_BOOT_MGR                   = 10,
-   PRI_FAT32_INT13                = 11,
-   EXT_FAT32_INT13                = 12,
-   SILICON_SAFE                   = 13,
-   EXT_FAT16_INT13                = 14,
-   WIN95_EXT_PARTITION            = 15,
-   OPUS                           = 16,
-   FAT_12_HIDDEN                  = 17,
-   COMPAQ_DIAG                    = 18,
-   FAT_16_HIDDEN_INF32MB          = 20,
-   FAT_16_HIDDEN                  = 22,
-   NTFS_HPFS_HIDDEN               = 23,
-   AST_SMARTSLEEP_PARTITION       = 24,
-   OSR2_FAT32                     = 27,
-   OSR2_FAT32_LBA                 = 28,
-   HIDDEN_FAT16_LBA               = 30,
-   NEC_DOS                        = 36,
-   PQSERVICE_ROUTERBOOT           = 39,
-   ATHEOS_FILE_SYSTEM             = 42,
-   NOS                            = 50,
-   JFS_ON_OS2_OR_ECS              = 53,
-   THEOS_2GB                      = 56,
-   PLAN_9_THEOS_SPANNED           = 57,
-   THEOS_4GB                      = 58,
-   THEOS_EXTENDED                 = 59,
-   PARTITIONMAGIC_RECOVERY        = 60,
-   HIDDEN_NETWARE                 = 61,
-   VENIX                          = 64,
-   LINUX_PPC_PREP                 = 65,
-   LINUX_SWAP                     = 66,
-   LINUX_NATIVE                   = 67,
-   GOBACK                         = 68,
-   BOOT_US_EUMEL_ELAN             = 69,
-   EUMEL_ELAN_1                   = 70,
-   EUMEL_ELAN_2                   = 71,
-   EUMEL_ELAN_3                   = 72,
-   OBERON                         = 76,
-   QNX4_X                         = 77,
-   QNX4_X_2ND_PART                = 78,
-   QNX4_X_3RD_PART_OBERON         = 79,
-   ONTRACK_LYNX_OBERON            = 80,
-   ONTRACK_NOVELL                 = 81,
-   CP_M_MICROPORT_SYSV_AT         = 82,
-   DISK_MANAGER_AUX3              = 83,
-   DISK_MANAGER_DDO               = 84,
-   EZ_DRIVE                       = 85,
-   GOLDEN_BOW_EZ_BIOS             = 86,
-   DRIVEPRO_VNDI                  = 87,
-   PRIAM_EDISK                    = 92,
-   SPEEDSTOR                      = 97,
-   GNU_HURD                       = 99,
-   NOVEL1                         = 100,
-   NETWARE_386                    = 101,
-   NETWARE_SMS_PARTITION          = 102,
-   NOVELL_1                       = 103,
-   NOVELL_2                       = 104,
-   NETWARE_NSS                    = 105,
-   DISKSECURE_MULTI_BOOT          = 112,
-   V7_X86                         = 114,
-   PC_IX                          = 117,
-   M2FS_M2CS_VNDI                 = 119,
-   XOSL_FS                        = 120,
-   MINUX_OLD                      = 128,
-   MINUX_LINUX                    = 129,
-   LINUX_SWAP_2                   = 130,
-   LINUX_NATIVE_2                 = 131,
-   OS2_HIDDEN_HIBERNATION         = 132,
-   LINUX_EXTENDED                 = 133,
-   OLD_LINUX_RAID_FAT16           = 134,
-   NTFS_VOLUME_SET                = 135,
-   LINUX_PLAINTEXT_TABLE          = 136,
-   LINUX_KERNEL_AIR_BOOT          = 138,
-   FAULT_TOLERANT_FAT32           = 139,
-   FAULT_TOLERANT_FAT32_INT13H    = 140,
-   FREE_FDISK_FAT12               = 141,
-   LINUX_LOGICAL_VOLUME_MANAGER   = 142,
-   FREE_FDISK_PRIMARY_FAT16       = 144,
-   FREE_FDISK_EXTENDED            = 145,
-   FREE_FDISK_LARGE_FAT16         = 146,
-   AMOEBA                         = 147,
-   AMOEBA_BBT                     = 148,
-   MIT_EXOPC                      = 149,
-   CHRP_ISO_9660                  = 150,
-   FREE_FDISK_FAT32               = 151,
-   FREE_FDISK_FAT32_LBA           = 152,
-   DCE376                         = 153,
-   FREE_FDISK_FAT16_LBA           = 154,
-   FREE_FDISK_EXTENDED_LBA        = 155,
-   FORTHOS                        = 158,
-   BSD_OS                         = 159,
-   LAPTOP_HIBERNATION             = 160,
-   LAPTOP_HIBERNATION_HP          = 161,
-   HP_EXPANSION_SPEEDSTOR_1       = 163,
-   HP_EXPANSION_SPEEDSTOR_2       = 164,
-   BSD_386                        = 165,
-   OPENBSD_SPEEDSTOR              = 166,
-   NEXTSTEP                       = 167,
-   MAC_OS_X                       = 168,
-   NETBSD                         = 169,
-   OLIVETTI                       = 170,
-   MAC_OS_X_BOOT_GO               = 171,
-   RISC_OS_ADFS                   = 173,
-   SHAGOS                         = 174,
-   SHAGOS_SWAP_MACOS_X_HFS        = 175,
-   BOOTSTAR_DUMMY                 = 176,
-   HP_EXPANSION_QNX               = 177,
-   QNX_POWER_SAFE                 = 178,
-   HP_EXPANSION_QNX_2             = 179,
-   HP_EXPANSION_SPEEDSTOR_3       = 180,
-   HP_EXPANSION_FAT16             = 182,
-   BSDI_FS                        = 183,
-   BSDI_SWAP                      = 184,
-   BOOT_WIZARD_HIDDEN             = 187,
-   ACRONIS_BACKUP                 = 188,
-   BONNYDOS_286                   = 189,
-   SOLARIS_8_BOOT                 = 190,
-   NEW_SOLARIS                    = 191,
-   CTOS_REAL_32_DR_DOS            = 192,
-   DRDOS_SECURED                  = 193,
-   HIDDEN_LINUX_SWAP              = 195,
-   DRDOS_SECURED_FAT16            = 196,
-   DRDOS_SECURED_EXTENDED         = 197,
-   DRDOS_SECURED_FAT16_STRIPE     = 198,
-   SYRINX                         = 199,
-   DR_DOS_8_1                     = 200,
-   DR_DOS_8_2                     = 201,
-   DR_DOS_8_3                     = 202,
-   DR_DOS_7_SECURED_FAT32_CHS     = 203,
-   DR_DOS_7_SECURED_FAT32_LBA     = 204,
-   CTOS_MEMDUMP                   = 205,
-   DR_DOS_7_FAT16X                = 206,
-   DR_DOS_7_SECURED_EXT_DOS       = 207,
-   REAL_32_SECURE                 = 208,
-   OLD_MULTIUSER_FAT12            = 209,
-   OLD_MULTIUSER_FAT16            = 212,
-   OLD_MULTIUSER_EXTENDED         = 213,
-   OLD_MULTIUSER_FAT16_2          = 214,
-   CP_M_86                        = 216,
-   NON_FS_DATA_POWERCOPY_BACKUP   = 218,
-   CP_M                           = 219,
-   HIDDEN_CTOS_MEMDUMP            = 221,
-   DELL_POWEREDGE_UTIL            = 222,
-   DG_UX_DISK_MANAGER_BOOTIT      = 223,
-   ACCESS_DOS                     = 225,
-   DOS_R_O                        = 227,
-   SPEEDSTOR_FAT16_EXTENDED       = 228,
-   STORAGE_DIMENSIONS_SPEEDSTOR   = 230,
-   LUKS                           = 232,
-   RUFUS_EXTRA_FREEDESKTOP        = 234,
-   BEOS_BFS                       = 235,
-   SKYOS_SKYFS                    = 236,
-   LEGACY_MBR_EFI_HEADER          = 238,
-   EFI_FS                         = 239,
-   LINUX_PA_RISC_BOOT             = 240,
-   STORAGE_DIMENSIONS_SPEEDSTOR_2 = 241,
-   DOS_SECONDARY                  = 242,
-   SPEEDSTOR_LARGE_PROLOGUE       = 244,
-   PROLOGUE_MULTI_VOLUME          = 245,
-   STORAGE_DIMENSIONS_SPEEDSTOR_3 = 246,
-   DDRDRIVE_SOLID_STATE_FS        = 247,
-   PCACHE                         = 249,
-   BOCHS                          = 250,
-   VMWARE_FILE_SYSTEM             = 251,
-   VMWARE_SWAP                    = 252,
-   LINUX_RAID                     = 253,
-   SPEEDSTOR_LANSTEP_LINUX        = 254,
-   BBT                            = 255,
-} SYSTEMID <format=hex>;
+   PARTITION_SYSTEMID_EMPTY                          = 0,
+   PARTITION_SYSTEMID_FAT_12                         = 1,
+   PARTITION_SYSTEMID_XENIX_ROOT                     = 2,
+   PARTITION_SYSTEMID_XENIX_USR                      = 3,
+   PARTITION_SYSTEMID_FAT_16_INF32MB                 = 4,
+   PARTITION_SYSTEMID_EXTENDED                       = 5,
+   PARTITION_SYSTEMID_FAT_16                         = 6,
+   PARTITION_SYSTEMID_NTFS_HPFS                      = 7,
+   PARTITION_SYSTEMID_AIX                            = 8,
+   PARTITION_SYSTEMID_AIX_BOOT                       = 9,
+   PARTITION_SYSTEMID_OS2_BOOT_MGR                   = 10,
+   PARTITION_SYSTEMID_PRI_FAT32_INT13                = 11,
+   PARTITION_SYSTEMID_EXT_FAT32_INT13                = 12,
+   PARTITION_SYSTEMID_SILICON_SAFE                   = 13,
+   PARTITION_SYSTEMID_EXT_FAT16_INT13                = 14,
+   PARTITION_SYSTEMID_WIN95_EXT_PARTITION            = 15,
+   PARTITION_SYSTEMID_OPUS                           = 16,
+   PARTITION_SYSTEMID_FAT_12_HIDDEN                  = 17,
+   PARTITION_SYSTEMID_COMPAQ_DIAG                    = 18,
+   PARTITION_SYSTEMID_FAT_16_HIDDEN_INF32MB          = 20,
+   PARTITION_SYSTEMID_FAT_16_HIDDEN                  = 22,
+   PARTITION_SYSTEMID_NTFS_HPFS_HIDDEN               = 23,
+   PARTITION_SYSTEMID_AST_SMARTSLEEP_PARTITION       = 24,
+   PARTITION_SYSTEMID_OSR2_FAT32                     = 27,
+   PARTITION_SYSTEMID_OSR2_FAT32_LBA                 = 28,
+   PARTITION_SYSTEMID_HIDDEN_FAT16_LBA               = 30,
+   PARTITION_SYSTEMID_NEC_DOS                        = 36,
+   PARTITION_SYSTEMID_PQSERVICE_ROUTERBOOT           = 39,
+   PARTITION_SYSTEMID_ATHEOS_FILE_SYSTEM             = 42,
+   PARTITION_SYSTEMID_NOS                            = 50,
+   PARTITION_SYSTEMID_JFS_ON_OS2_OR_ECS              = 53,
+   PARTITION_SYSTEMID_THEOS_2GB                      = 56,
+   PARTITION_SYSTEMID_PLAN_9_THEOS_SPANNED           = 57,
+   PARTITION_SYSTEMID_THEOS_4GB                      = 58,
+   PARTITION_SYSTEMID_THEOS_EXTENDED                 = 59,
+   PARTITION_SYSTEMID_PARTITIONMAGIC_RECOVERY        = 60,
+   PARTITION_SYSTEMID_HIDDEN_NETWARE                 = 61,
+   PARTITION_SYSTEMID_VENIX                          = 64,
+   PARTITION_SYSTEMID_LINUX_PPC_PREP                 = 65,
+   PARTITION_SYSTEMID_LINUX_SWAP                     = 66,
+   PARTITION_SYSTEMID_LINUX_NATIVE                   = 67,
+   PARTITION_SYSTEMID_GOBACK                         = 68,
+   PARTITION_SYSTEMID_BOOT_US_EUMEL_ELAN             = 69,
+   PARTITION_SYSTEMID_EUMEL_ELAN_1                   = 70,
+   PARTITION_SYSTEMID_EUMEL_ELAN_2                   = 71,
+   PARTITION_SYSTEMID_EUMEL_ELAN_3                   = 72,
+   PARTITION_SYSTEMID_OBERON                         = 76,
+   PARTITION_SYSTEMID_QNX4_X                         = 77,
+   PARTITION_SYSTEMID_QNX4_X_2ND_PART                = 78,
+   PARTITION_SYSTEMID_QNX4_X_3RD_PART_OBERON         = 79,
+   PARTITION_SYSTEMID_ONTRACK_LYNX_OBERON            = 80,
+   PARTITION_SYSTEMID_ONTRACK_NOVELL                 = 81,
+   PARTITION_SYSTEMID_CP_M_MICROPORT_SYSV_AT         = 82,
+   PARTITION_SYSTEMID_DISK_MANAGER_AUX3              = 83,
+   PARTITION_SYSTEMID_DISK_MANAGER_DDO               = 84,
+   PARTITION_SYSTEMID_EZ_DRIVE                       = 85,
+   PARTITION_SYSTEMID_GOLDEN_BOW_EZ_BIOS             = 86,
+   PARTITION_SYSTEMID_DRIVEPRO_VNDI                  = 87,
+   PARTITION_SYSTEMID_PRIAM_EDISK                    = 92,
+   PARTITION_SYSTEMID_SPEEDSTOR                      = 97,
+   PARTITION_SYSTEMID_GNU_HURD                       = 99,
+   PARTITION_SYSTEMID_NOVELL                         = 100,
+   PARTITION_SYSTEMID_NETWARE_386                    = 101,
+   PARTITION_SYSTEMID_NETWARE_SMS_PARTITION          = 102,
+   PARTITION_SYSTEMID_NOVELL_1                       = 103,
+   PARTITION_SYSTEMID_NOVELL_2                       = 104,
+   PARTITION_SYSTEMID_NETWARE_NSS                    = 105,
+   PARTITION_SYSTEMID_DISKSECURE_MULTI_BOOT          = 112,
+   PARTITION_SYSTEMID_V7_X86                         = 114,
+   PARTITION_SYSTEMID_PC_IX                          = 117,
+   PARTITION_SYSTEMID_M2FS_M2CS_VNDI                 = 119,
+   PARTITION_SYSTEMID_XOSL_FS                        = 120,
+   PARTITION_SYSTEMID_MINUX_OLD                      = 128,
+   PARTITION_SYSTEMID_MINUX_LINUX                    = 129,
+   PARTITION_SYSTEMID_LINUX_SWAP_2                   = 130,
+   PARTITION_SYSTEMID_LINUX_NATIVE_2                 = 131,
+   PARTITION_SYSTEMID_OS2_HIDDEN_HIBERNATION         = 132,
+   PARTITION_SYSTEMID_LINUX_EXTENDED                 = 133,
+   PARTITION_SYSTEMID_OLD_LINUX_RAID_FAT16           = 134,
+   PARTITION_SYSTEMID_NTFS_VOLUME_SET                = 135,
+   PARTITION_SYSTEMID_LINUX_PLAINTEXT_TABLE          = 136,
+   PARTITION_SYSTEMID_LINUX_KERNEL_AIR_BOOT          = 138,
+   PARTITION_SYSTEMID_FAULT_TOLERANT_FAT32           = 139,
+   PARTITION_SYSTEMID_FAULT_TOLERANT_FAT32_INT13H    = 140,
+   PARTITION_SYSTEMID_FREE_FDISK_FAT12               = 141,
+   PARTITION_SYSTEMID_LINUX_LOGICAL_VOLUME_MANAGER   = 142,
+   PARTITION_SYSTEMID_FREE_FDISK_PRIMARY_FAT16       = 144,
+   PARTITION_SYSTEMID_FREE_FDISK_EXTENDED            = 145,
+   PARTITION_SYSTEMID_FREE_FDISK_LARGE_FAT16         = 146,
+   PARTITION_SYSTEMID_AMOEBA                         = 147,
+   PARTITION_SYSTEMID_AMOEBA_BBT                     = 148,
+   PARTITION_SYSTEMID_MIT_EXOPC                      = 149,
+   PARTITION_SYSTEMID_CHRP_ISO_9660                  = 150,
+   PARTITION_SYSTEMID_FREE_FDISK_FAT32               = 151,
+   PARTITION_SYSTEMID_FREE_FDISK_FAT32_LBA           = 152,
+   PARTITION_SYSTEMID_DCE376                         = 153,
+   PARTITION_SYSTEMID_FREE_FDISK_FAT16_LBA           = 154,
+   PARTITION_SYSTEMID_FREE_FDISK_EXTENDED_LBA        = 155,
+   PARTITION_SYSTEMID_FORTHOS                        = 158,
+   PARTITION_SYSTEMID_BSD_OS                         = 159,
+   PARTITION_SYSTEMID_LAPTOP_HIBERNATION             = 160,
+   PARTITION_SYSTEMID_LAPTOP_HIBERNATION_HP          = 161,
+   PARTITION_SYSTEMID_HP_EXPANSION_SPEEDSTOR_1       = 163,
+   PARTITION_SYSTEMID_HP_EXPANSION_SPEEDSTOR_2       = 164,
+   PARTITION_SYSTEMID_BSD_386                        = 165,
+   PARTITION_SYSTEMID_OPENBSD_SPEEDSTOR              = 166,
+   PARTITION_SYSTEMID_NEXTSTEP                       = 167,
+   PARTITION_SYSTEMID_MAC_OS_X                       = 168,
+   PARTITION_SYSTEMID_NETBSD                         = 169,
+   PARTITION_SYSTEMID_OLIVETTI                       = 170,
+   PARTITION_SYSTEMID_MAC_OS_X_BOOT_GO               = 171,
+   PARTITION_SYSTEMID_RISC_OS_ADFS                   = 173,
+   PARTITION_SYSTEMID_SHAGOS                         = 174,
+   PARTITION_SYSTEMID_SHAGOS_SWAP_MACOS_X_HFS        = 175,
+   PARTITION_SYSTEMID_BOOTSTAR_DUMMY                 = 176,
+   PARTITION_SYSTEMID_HP_EXPANSION_QNX               = 177,
+   PARTITION_SYSTEMID_QNX_POWER_SAFE                 = 178,
+   PARTITION_SYSTEMID_HP_EXPANSION_QNX_2             = 179,
+   PARTITION_SYSTEMID_HP_EXPANSION_SPEEDSTOR_3       = 180,
+   PARTITION_SYSTEMID_HP_EXPANSION_FAT16             = 182,
+   PARTITION_SYSTEMID_BSDI_FS                        = 183,
+   PARTITION_SYSTEMID_BSDI_SWAP                      = 184,
+   PARTITION_SYSTEMID_BOOT_WIZARD_HIDDEN             = 187,
+   PARTITION_SYSTEMID_ACRONIS_BACKUP                 = 188,
+   PARTITION_SYSTEMID_BONNYDOS_286                   = 189,
+   PARTITION_SYSTEMID_SOLARIS_8_BOOT                 = 190,
+   PARTITION_SYSTEMID_NEW_SOLARIS                    = 191,
+   PARTITION_SYSTEMID_CTOS_REAL_32_DR_DOS            = 192,
+   PARTITION_SYSTEMID_DRDOS_SECURED                  = 193,
+   PARTITION_SYSTEMID_HIDDEN_LINUX_SWAP              = 195,
+   PARTITION_SYSTEMID_DRDOS_SECURED_FAT16            = 196,
+   PARTITION_SYSTEMID_DRDOS_SECURED_EXTENDED         = 197,
+   PARTITION_SYSTEMID_DRDOS_SECURED_FAT16_STRIPE     = 198,
+   PARTITION_SYSTEMID_SYRINX                         = 199,
+   PARTITION_SYSTEMID_DR_DOS_8_1                     = 200,
+   PARTITION_SYSTEMID_DR_DOS_8_2                     = 201,
+   PARTITION_SYSTEMID_DR_DOS_8_3                     = 202,
+   PARTITION_SYSTEMID_DR_DOS_7_SECURED_FAT32_CHS     = 203,
+   PARTITION_SYSTEMID_DR_DOS_7_SECURED_FAT32_LBA     = 204,
+   PARTITION_SYSTEMID_CTOS_MEMDUMP                   = 205,
+   PARTITION_SYSTEMID_DR_DOS_7_FAT16X                = 206,
+   PARTITION_SYSTEMID_DR_DOS_7_SECURED_EXT_DOS       = 207,
+   PARTITION_SYSTEMID_REAL_32_SECURE                 = 208,
+   PARTITION_SYSTEMID_OLD_MULTIUSER_FAT12            = 209,
+   PARTITION_SYSTEMID_OLD_MULTIUSER_FAT16            = 212,
+   PARTITION_SYSTEMID_OLD_MULTIUSER_EXTENDED         = 213,
+   PARTITION_SYSTEMID_OLD_MULTIUSER_FAT16_2          = 214,
+   PARTITION_SYSTEMID_CP_M_86                        = 216,
+   PARTITION_SYSTEMID_NON_FS_DATA_POWERCOPY_BACKUP   = 218,
+   PARTITION_SYSTEMID_CP_M                           = 219,
+   PARTITION_SYSTEMID_HIDDEN_CTOS_MEMDUMP            = 221,
+   PARTITION_SYSTEMID_DELL_POWEREDGE_UTIL            = 222,
+   PARTITION_SYSTEMID_DG_UX_DISK_MANAGER_BOOTIT      = 223,
+   PARTITION_SYSTEMID_ACCESS_DOS                     = 225,
+   PARTITION_SYSTEMID_DOS_R_O                        = 227,
+   PARTITION_SYSTEMID_SPEEDSTOR_FAT16_EXTENDED       = 228,
+   PARTITION_SYSTEMID_STORAGE_DIMENSIONS_SPEEDSTOR   = 230,
+   PARTITION_SYSTEMID_LUKS                           = 232,
+   PARTITION_SYSTEMID_RUFUS_EXTRA_FREEDESKTOP        = 234,
+   PARTITION_SYSTEMID_BEOS_BFS                       = 235,
+   PARTITION_SYSTEMID_SKYOS_SKYFS                    = 236,
+   PARTITION_SYSTEMID_LEGACY_MBR_EFI_HEADER          = 238,
+   PARTITION_SYSTEMID_EFI_FS                         = 239,
+   PARTITION_SYSTEMID_LINUX_PA_RISC_BOOT             = 240,
+   PARTITION_SYSTEMID_STORAGE_DIMENSIONS_SPEEDSTOR_2 = 241,
+   PARTITION_SYSTEMID_DOS_SECONDARY                  = 242,
+   PARTITION_SYSTEMID_SPEEDSTOR_LARGE_PROLOGUE       = 244,
+   PARTITION_SYSTEMID_PROLOGUE_MULTI_VOLUME          = 245,
+   PARTITION_SYSTEMID_STORAGE_DIMENSIONS_SPEEDSTOR_3 = 246,
+   PARTITION_SYSTEMID_DDRDRIVE_SOLID_STATE_FS        = 247,
+   PARTITION_SYSTEMID_PCACHE                         = 249,
+   PARTITION_SYSTEMID_BOCHS                          = 250,
+   PARTITION_SYSTEMID_VMWARE_FILE_SYSTEM             = 251,
+   PARTITION_SYSTEMID_VMWARE_SWAP                    = 252,
+   PARTITION_SYSTEMID_LINUX_RAID                     = 253,
+   PARTITION_SYSTEMID_SPEEDSTOR_LANSTEP_LINUX        = 254,
+   PARTITION_SYSTEMID_BBT                            = 255,
+} PARTITION_SYSTEMID <format=hex>;
+
+// hack to allow printing this when using an integer instead of byte....
+string ReadPARTITION_SYSTEMID( int SystemIdAsInteger )
+{
+    local string result = "";
+    if (SystemIdAsInteger >= 0 && SystemIdAsInteger <= 0xFF) {
+        local PARTITION_SYSTEMID tmp = (PARTITION_SYSTEMID)SystemIdAsInteger;
+        result = EnumToString(tmp);
+    }
+    if (Strlen(result) == 0) {
+        SPrintf(result, "Invalid (0x%x)", SystemIdAsInteger);
+    }
+    return result;
+}
 
 // Media descriptor
 typedef enum <uchar>
@@ -244,7 +266,7 @@ typedef enum <uchar>
 typedef UBYTE GUID[16] <read=ReadGUID, format=hex>;
 string ReadGUID( GUID &g )
 {
-    string s;
+    local string s;
     SPrintf( s, "{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
         g[3],g[2],g[1],g[0],g[5],g[4],g[7],g[6],g[8],g[9],g[10],g[11],g[12],g[13],g[14],g[15] );
     return s;
@@ -256,7 +278,7 @@ typedef struct
    BOOTINDICATOR BootIndicator;
    UBYTE         StartingHead <format=hex>;
    WORD          StartingSectCylinder <format=hex>;   // Need Bit fields
-   SYSTEMID      SystemID;
+   PARTITION_SYSTEMID SystemID;
    UBYTE         EndingHead <format=hex>;
    WORD          EndingSectCylinder <format=hex>;     // Need Bit fields
    DWORD         RelativeSector <format=hex>;
@@ -452,6 +474,353 @@ typedef struct
 } EFI_PARTITION <open=true>;
 
 //################################################################
+// File system support section
+//################################################################
+
+typedef enum <uint32> {
+    FILE_SYSTEM_TYPE_NONE    = 0x0000,
+    FILE_SYSTEM_TYPE_IFS     = 0x0010,
+    FILE_SYSTEM_TYPE_NTFS    = 0x0020,
+    FILE_SYSTEM_TYPE_HPFS    = 0x0040,
+    FILE_SYSTEM_TYPE_FAT12   = 0x0100,
+    FILE_SYSTEM_TYPE_FAT16   = 0x0200,
+    FILE_SYSTEM_TYPE_FAT32   = 0x0400,
+    FILE_SYSTEM_TYPE_EXFAT   = 0x0800,
+} FILE_SYSTEM_TYPE <read=ReadFILE_SYSTEM_TYPE>;
+local const uint32 FILE_SYSTEM_TYPE_INVALID_MASK <hidden=true> = 0xFFFFF08F;
+local const uint32 FILE_SYSTEM_TYPE_VALID_MASK   <hidden=true> = 0x00000F70;
+local const uint32 FILE_SYSTEM_TYPE_ANY_FAT_MASK <hidden=true> = 0x00000700;
+local const uint32 MAX_UINT32 <hidden=true> = 0xFFFFFFFF;
+Assert((MAX_UINT32 ^ (FILE_SYSTEM_TYPE_INVALID_MASK ^ FILE_SYSTEM_TYPE_VALID_MASK)) == 0);
+Assert((MAX_UINT32 ^ (FILE_SYSTEM_TYPE_INVALID_MASK | FILE_SYSTEM_TYPE_VALID_MASK)) == 0);
+
+string ReadFILE_SYSTEM_TYPE(FILE_SYSTEM_TYPE &type) {
+    if (type == FILE_SYSTEM_TYPE_NONE) { return "FILE_SYSTEM_TYPE_NONE"; }
+    local string result = "";
+    if (type & FILE_SYSTEM_TYPE_EXFAT ) { result += "| EXFAT"; }
+    if (type & FILE_SYSTEM_TYPE_FAT32 ) { result += "| FAT32"; }
+    if (type & FILE_SYSTEM_TYPE_FAT16 ) { result += "| FAT16"; }
+    if (type & FILE_SYSTEM_TYPE_FAT12 ) { result += "| FAT12"; }
+    if (type & FILE_SYSTEM_TYPE_HPFS  ) { result += "| HPFS"; }
+    if (type & FILE_SYSTEM_TYPE_NTFS  ) { result += "| NTFS"; }
+    if (type & FILE_SYSTEM_TYPE_IFS   ) { result += "| IFS"; }
+    local uint32 invalidFlags = ((uint32)type) & FILE_SYSTEM_TYPE_INVALID_MASK;
+    if (0 != invalidFlags) {
+        local string tmp;
+        SPrintf(tmp, "| 0x%x", type & invalidFlags);
+        result += tmp;
+    }
+    result = SubStr(result, 2);
+    return result;
+}
+
+//################################################################
+// IFS Drives
+//################################################################
+local const boolean IFS_VARIABLE_LENGTH_STRUCTURE <hidden=true> = false;
+
+typedef struct IFS_BOOTSECTOR { // see FILE_SYSTEM_RECOGNITION_STRUCTURE from Microsoft docs
+    BYTE    jmp[3]          <format=hex>;
+    CHAR    OemName[8];
+    BYTE    MustBeZero[5]   <format=hex>;
+    DWORD   Identifier      <format=hex>; // must be 0x53525346 for Windows IFS
+    USHORT  Length          <format=hex>; // must be 0x18 (24?) ?? or allowed to be up to 64k?
+    USHORT  Checksum;
+    local UINT32 ExpectedChecksum =  Calculate_IFS_BOOTSECTOR_Checksum(this);
+
+    // Only add additional data when IFS structure is variable length AND
+    // checksum matches expected checksum AND there's actually additional data
+
+    if (IFS_VARIABLE_LENGTH_STRUCTURE && (Length > 24) && (ExpectedChecksum == Checksum)) {
+        BYTE AdditionalData[Length-24] <format=hex>;
+    }
+};
+// use a larger type to allow non-valid values (any value over 0xFFFF) to indicate errors
+UINT32 Calculate_IFS_BOOTSECTOR_Checksum( IFS_BOOTSECTOR& boot )
+{
+    local USHORT result = 0;
+    local USHORT i = 0;
+    local int64  start = startof(boot);
+    local int64  end = start + boot.Length;
+    
+    // If the IFS structure is not variable-lenght, then length MUST be 24 for a valid checksum
+    if (!IFS_VARIABLE_LENGTH_STRUCTURE) {
+        if (boot.Length != 24) {
+            return 0xBAAD0001;
+        }
+    }
+    // If the IFS structure goes beyond the end of file, then NO possible valid checksum
+    if (end > FileSize()) {
+        return 0xBAAD0002;
+    }
+
+    // Else calculate actual checksum
+    for (i = 3; i < boot.Length; i++) {
+        if (i == 22 || i == 23) { continue; } // skip the checksum itself
+        result = ((result & 1) ? 0x8000 : 0) + ((result >> 1) & 0x7FFF) + ReadByte(start+i);
+    }
+    return result;    
+}
+boolean IsValidIfsBootsector( IFS_BOOTSECTOR &boot) {
+    if (boot.MustBeZero[0] != 0) return false;
+    if (boot.MustBeZero[1] != 0) return false;
+    if (boot.MustBeZero[2] != 0) return false;
+    if (boot.MustBeZero[3] != 0) return false;
+    if (boot.MustBeZero[4] != 0) return false;
+    if (boot.Length != 24) return false;
+    if (boot.Identifier != 0x53525346) return false;
+    if (boot.ExpectedChecksum != boot.Checksum) return false;
+    return true;
+}
+
+//################################################################
+// exFAT Drives
+//################################################################
+typedef struct EXFAT_BOOTSECTOR {
+    BYTE    jmp[3]                        <format=hex>;
+    CHAR    OemName[8];
+    BYTE    MustBeZero[53]                <format=hex>; // covers the FAT12/16/32 BPB area
+    uint64  NumHiddenSectors              <format=hex>; // aka sectors prior to this volume; ignored here; if non-zero, can be used during boot-strapping via INT 13h
+    uint64  NumberOfSectors               <format=hex>; // min: 2^20 / BytesPerSectorShift  max: 0xFFF..FF
+    uint32  FirstFatSectorOffset          <format=hex>; // volume sector offset to first FAT table  min: 24  max: complex ... 
+    uint32  SectorsPerFat                 <format=hex>; // sector count for each copy of FAT    min:  (ClusterCount+2)*4 / SectorSize, ***ROUNDED UP***   max: (ClusterHeapOffset - FatOffset) / NumberOfFatTables
+    uint32  DataAreaSectorOffset          <format=hex>; // 
+    uint32  CountOfDataClusters           <format=hex>; // stored directly in the BPB, at last!
+    uint32  RootCluster                   <format=hex>; // first cluster, then follow FAT chain
+    uint32  VolumeSerialNumber            <format=hex>; // all values are valid
+    byte    FileSystemRevisionMinor       <format=hex>;
+    byte    FileSystemRevisionMajor       <format=hex>;
+    uint16  ActiveFatIndex   :  1;                      // zero-based index of the active FAT
+    uint16  IsVolumeDirty    :  1;                      // if non-zero, volume dismounted unexpectedly
+    uint16  MediaError       :  1;                      // a cluster not marked in as "bad" in FAT may be marginal or fail reads/writes
+    uint16  ReservedBits     : 13;
+    byte    BytesPerSectorShift           <format=hex>; // min: 9 (512 bytes), max: 12 (4096 bytes)
+    byte    SectorsPerClusterShift        <format=hex>; // min: 0 (1 sector/cluster), max: 25 - BytesPerSectorShift (32MB)
+    byte    NumberOfFatTables             <format=hex>; // min: 1, max: 2
+    byte    DriveNumber                   <format=hex>; // ignored here; can be used during boot-strapping via INT 13h
+    byte    PercentInUse                  <format=hex>; // min: 0, max: 100 -OR- exactly 0xFF
+    byte    Reserved[7]                   <format=hex>; 
+    BYTE    BootCode[390]                 <format=hex>;
+    uint16  EndOfSectorMarker             <format=hex>;
+
+    local FILE_SYSTEM_TYPE FsType = FILE_SYSTEM_TYPE_NONE;
+
+    if (IsValidExfatBootSector(this)) {
+        // and some fields whose sole purpose is simplify (duck-typing) usage by common FAT12/16/32 and exFAT code
+        local  uint16 BytesPerSector    <format=hex> = 1 << BytesPerSectorShift;
+        local  byte   SectorsPerCluster <format=hex> = 1 << SectorsPerClusterShift;
+        local  uint16 MaxRootDirEntries              = 0;
+        local  uint32 MaximumValidClusterNumber      = CountOfDataClusters + 1;
+        FsType = FILE_SYSTEM_TYPE_EXFAT;
+    }
+};
+boolean IsValidExfatBootSector(EXFAT_BOOTSECTOR &boot) {
+    // EXFAT specifies quite a bit...
+    if (boot.EndOfSectorMarker != 0xAA55) { return false; }
+    // validate those MustBeZero bytes actually are zero
+    local int i = 0;
+    for (i = 0; i < 53; i++) {
+        if (boot.MustBeZero[i] != 0) { return false; }
+    }
+    local uint32 minBytes = 1 << 20;
+    if (boot.FileSystemRevisionMajor != 1)                                 { return false; }
+    if ((boot.BytesPerSectorShift < 9) || (boot.BytesPerSectorShift > 12)) { return false; }
+    local uint32 bytesPerSector = 1 < boot.BytesPerSectorShift;
+    if ((minBytes / bytesPerSector) > boot.NumberOfSectors)                { return false; }
+
+    local int64 originalPosition = FTell();
+    
+    local int64 offsetToChecksums = (int64)bytesPerSector * 11;
+    local int64 checksumStart = startof(boot) + offsetToChecksums;
+    local uint32 firstChecksum = ReadUInt(checksumStart);
+    local uint32 currentChecksum;
+    for (i = 0; i < bytesPerSector; i+=4) {
+        currentChecksum = ReadUInt(checksumStart + i);
+        if (currentChecksum != firstChecksum) { return false; }
+    }
+    // this is mandatory... but I wonder if it's actually filled in as required?
+    Assert(boot.OemName == "EXFAT   ");
+    return true;
+}
+
+//################################################################
+// Combined FAT12/FAT16/FAT32 structures
+//################################################################
+typedef struct FAT_BOOTSECTOR {
+    BYTE    jmp[3]                <format=hex>;
+    CHAR    OemName[8];
+    USHORT  BytesPerSector        <format=hex>; // legal == { 512, 1024, 2048, 4096 }
+    UBYTE   SectorsPerCluster     <format=hex>; // legal == { 1, 2, 4, 8, 16, 32, 64, 128 }
+    USHORT  ReservedSectors       <format=hex>; // must not be zero; legal for FAT12/16 == { 1 }, typically 32 for FAT32
+    UBYTE   NumberOfFatTables     <format=hex>; // must not be zero; warn if this is not set to the value 1 or 2
+    USHORT  MaxRootDirEntries     <format=hex>; // legal for FAT12/16 == N * (BytesPerSector / 32), N is non-zero; must be {0} for FAT32
+    USHORT  NumberOfSectors16     <format=hex>; // must be {0} for FAT32; if {0}, then NumberOfSectors32 must be non-zero
+    MEDIA   MediaDescriptor       <format=hex>; // legacy
+    USHORT  SectorsPerFat16       <format=hex>; // must be {0} for FAT32; must be non-zero for FAT12/16
+    USHORT  SectorsPerTrack       <format=hex>; // legacy
+    USHORT  HeadsPerCylinder      <format=hex>; // legacy
+    ULONG   NumHiddenSectors      <format=hex>; // legacy
+    ULONG   NumberOfSectors32     <format=hex>; // must be non-zero for FAT32; must be >= 0x10000 if NumberOfSectors16 is zero
+
+    if (0 == this.SectorsPerFat16) { // FAT32 starting at sector offset 36
+        DWORD SectorsPerFat32    <format=hex>;
+        WORD  ActiveFatIndex : 4 <format=hex>; // zero-based index of the active FAT
+        WORD  FlagsReserved1 : 3 <format=hex>; 
+        WORD  TransactionFat : 1 <format=hex>; // 1 means only one FAT active, as indicated by ActiveFatIndex; 0 means both FATs are mirrored
+        WORD  FlagsReserved2 : 8 <format=hex>;
+        WORD  Version            <format=hex>; // must be 0
+        DWORD RootCluster        <format=hex>; // cluster number (FAT index) for root.  usually 2.  preferably first non-bad sector.
+        WORD  InfoSector         <format=hex>; // usually 1.
+        WORD  BootBackupStart    <format=hex>; // usually 6.  No other value than 6 is recommended
+        BYTE  Reserved[12]       <format=hex>; // set to zero by formatting utility, no indicaton of other uses but shall be ignored/preserved
+    }
+
+    BYTE   DriveNumber        <format=hex>;
+    BYTE   Unused             <format=hex>;
+    BYTE   ExtBootSignature   <format=hex>;
+    DWORD  SerialNumber       <format=hex>; // only valid if ExtBootSignature == 0x29
+    CHAR   VolumeLabel[11]    <format=hex>; // only valid if ExtBootSignature == 0x29
+    CHAR   FileSystemLabel[8] <format=hex>; // only valid if ExtBootSignature == 0x29
+
+    local INT64 tmp <hidden=true> = 510 - (FTell() - startof(this)); // 420 for FAT32, 448 for FAT16/12
+    UBYTE  BootCode[tmp]      <format=hex>;
+    WORD   EndOfSectorMarker  <format=hex>;
+
+    // Helpers to make FAT12/16/32 more common
+    local DWORD NumberOfSectors = (this.NumberOfSectors16 != 0) ? this.NumberOfSectors16 : this.NumberOfSectors32;
+    local DWORD SectorsPerFat   = (this.SectorsPerFat16   != 0) ? this.SectorsPerFat16   : this.SectorsPerFat32;
+    local DWORD CountOfDataClusters = ReadFAT_BOOTSECTOR_CountOfDataClusters(this);
+    local DWORD MaximumValidClusterNumber = CountOfDataClusters + 1; // +2, but zero-based indexing, so largest valid value is Count+1
+
+    local FILE_SYSTEM_TYPE FsType = FILE_SYSTEM_TYPE_NONE;
+    if (CountOfDataClusters == 0) {
+        FsType = FILE_SYSTEM_TYPE_NONE; // oops
+    } else if (CountOfDataClusters < 4085) {
+        FsType = FILE_SYSTEM_TYPE_FAT12;
+    } else if (CountOfDataClusters < 65525) {
+        FsType = FILE_SYSTEM_TYPE_FAT16;
+    } else if (CountOfDataClusters < 0x0FFFFFF0 - 2) {
+        FsType = FILE_SYSTEM_TYPE_FAT32;
+    } else {
+        FsType = FILE_SYSTEM_TYPE_NONE; // oops
+    }    
+};
+
+DWORD ReadFAT_BOOTSECTOR_CountOfDataClusters( FAT_BOOTSECTOR &boot )
+{
+    if (boot.BytesPerSector == 0) return 0;
+    if (boot.BytesPerSector != 512) { // TODO: Fix 4k native sectors to show correct file data
+        Printf("WARNING: Potentially valid FAT file system at 0x%x.\r\n", startof(boot));
+        Printf("         Shows non-512 bytes per sector (0x%x)\r\n", boot.BytesPerSector);
+        Printf("         Treating as unsupported drive due to known bugs\r\n");
+        return 0; 
+    }
+
+    // First, the number of sectors in the special root directory area
+    local DWORD  rootDirectoryByteCount = boot.MaxRootDirEntries * 32;
+    local DWORD  rootDirectorySectors = rootDirectoryByteCount / boot.BytesPerSector;
+    if (rootDirectoryByteCount % boot.BytesPerSector != 0) {
+        rootDirectorySectors++;
+    }
+
+    // Next, the number of sectors in the data region
+    local DWORD sectorsPerFat = boot.SectorsPerFat;
+    local DWORD totalSectors = boot.NumberOfSectors;
+    local DWORD dataSectors = totalSectors;
+    dataSectors -= boot.ReservedSectors;
+    dataSectors -= boot.NumberOfFatTables * sectorsPerFat;
+    dataSectors -= rootDirectorySectors;
+
+    local DWORD countOfClusters = dataSectors / boot.SectorsPerCluster; // note that this rounds down
+    return countOfClusters;
+}
+boolean IsValidFatBootSector(FAT_BOOTSECTOR &boot) {
+    // FAT12/16/32 don't specify quite as much as mandatory...
+    if (boot.EndOfSectorMarker != 0xAA55) {
+        Printf("INVALID FAT (%08x): EndOfSectorMark not 0xAA55 (0x55 0xAA)\r\n", startof(boot));
+        return false;
+    }
+    if ((boot.FsType != FILE_SYSTEM_TYPE_FAT32) && 
+        (boot.FsType != FILE_SYSTEM_TYPE_FAT16) && 
+        (boot.FsType != FILE_SYSTEM_TYPE_FAT12) ) {
+        Printf("INVALID FAT (%08x): internal FsType not set to FAT32/16/12 (%s)\r\n", startof(boot), ReadFILE_SYSTEM_TYPE(boot.FsType));
+        return false;
+    }
+    if ((boot.BytesPerSector != 512) &&
+        (boot.BytesPerSector != 1024) &&
+        (boot.BytesPerSector != 2048) &&
+        (boot.BytesPerSector != 4096)) {
+        Printf("INVALID FAT (%08x): BytesPerSector (%x)\r\n", startof(boot), boot.BytesPerSector);
+        return false;
+    }
+    if ((boot.SectorsPerCluster  != 128) &&
+        (boot.SectorsPerCluster  !=  64) &&
+        (boot.SectorsPerCluster  !=  32) &&
+        (boot.SectorsPerCluster  !=  16) &&
+        (boot.SectorsPerCluster  !=   8) &&
+        (boot.SectorsPerCluster  !=   4) &&
+        (boot.SectorsPerCluster  !=   2) &&
+        (boot.SectorsPerCluster  !=   1)) {
+        Printf("INVALID FAT (%08x): SectorsPerCluster (%x)\r\n", startof(boot), boot.SectorsPerCluster);
+        return false;
+    }
+
+    if (boot.ReservedSectors     == 0) {
+        Printf("INVALID FAT (%08x): ReservedSectors is zero\r\n", startof(boot));
+        return false;
+    }
+    if ((boot.NumberOfFatTables  != 1) && (boot.NumberOfFatTables  != 2)) {
+        Printf("INVALID FAT (%08x): NumberOfFatTables invalid (%x)\r\n", startof(boot), boot.NumberOfFatTables);
+        return false;
+    }
+
+    if (boot.FsType == FILE_SYSTEM_TYPE_FAT32) {
+
+        if (boot.MaxRootDirEntries   != 0) {
+            Printf("INVALID FAT32 (%08x): MaxRootDirEntries must be zero (%x)\r\n", startof(boot), boot.MaxRootDirEntries);
+            return false;
+        }
+        if (boot.NumberOfSectors16   != 0) {
+            Printf("INVALID FAT32 (%08x): NumberOfSectors16 must be zero (%x)\r\n", startof(boot), boot.NumberOfSectors16);
+            return false;
+        }
+        if (boot.NumberOfSectors32   == 0) {
+            Printf("INVALID FAT32 (%08x): NumberOfSectors32 cannot be zero\r\n", startof(boot));
+            return false;
+        }
+        if (boot.SectorsPerFat16     != 0) {
+            Printf("INVALID FAT32 (%08x): SectorsPerFat16 must be zero (%x)\r\n", startof(boot), boot.SectorsPerFat16);
+            return false;
+        }
+        if (boot.SectorsPerFat32     == 0) {
+            Printf("INVALID FAT32 (%08x): SectorsPerFat32 cannot be zero\r\n", startof(boot));
+            return false;
+        }
+        if (boot.RootCluster         == 0) {
+            Printf("INVALID FAT32 (%08x): RootCluster cannot be zero\r\n", startof(boot));
+            return false;
+        }
+
+    } else if ((boot.FsType == FILE_SYSTEM_TYPE_FAT16) || (boot.FsType == FILE_SYSTEM_TYPE_FAT12)) {
+
+        if (boot.MaxRootDirEntries   == 0) {
+            Printf("INVALID FAT12/16 (%08x): MaxRootDirEntries cannot be zero\r\n", startof(boot));
+            return false;
+        }
+        if ((boot.NumberOfSectors16  == 0) && (boot.NumberOfSectors32  == 0)) {
+            Printf("INVALID FAT12/16 (%08x): NumberOfSectors16 and NumberOfSectors32 cannot both be zero\r\n", startof(boot));
+            return false;
+        }
+        if (boot.SectorsPerFat16     == 0) {
+            Printf("INVALID FAT12/16 (%08x): SectorsPerFat16 cannot be zero (%x)\r\n", startof(boot));
+            return false;
+        }
+    }
+    return true;
+}
+
+
+//################################################################
 // FAT16 Drives
 //################################################################
 
@@ -558,7 +927,10 @@ string ReadFAT16_CLUSTER_INFO( FAT16_CLUSTER_INFO &info )
 // NOTE: the first argument is the total size of BOTH tables, when two exist on the media
 typedef struct (quad SizeOfFatTableInSectors, UBYTE NumberOfCopiesOfFats)
 {
-    if(NumberOfCopiesOfFats<1 || NumberOfCopiesOfFats>2) return;
+    if(NumberOfCopiesOfFats<1 || NumberOfCopiesOfFats>2) {
+        Assert((NumberOfCopiesOfFats==1) || (NumberOfCopiesOfFats==2));
+        return;
+    }
     local unsigned char ClusterEntrySize=2;
 
     // show the first two entries as media type and partition status
@@ -747,7 +1119,10 @@ string ReadFAT32_CLUSTERINFO( FAT32_CLUSTERINFO &info )
 // FAT 32 Table
 typedef struct (quad SizeOfFatTableInSectors, UBYTE NumberOfCopiesOfFats, quad SectorSize)
 {
-    if(NumberOfCopiesOfFats<1 || NumberOfCopiesOfFats>2) return;
+    if(NumberOfCopiesOfFats<1 || NumberOfCopiesOfFats>2) {
+        Assert((NumberOfCopiesOfFats==1) || (NumberOfCopiesOfFats==2));
+        return;
+    }
     local unsigned char ClusterEntrySize=4;
 
     // FAT32 supports variable sector size
@@ -790,6 +1165,7 @@ typedef struct
 
     // FAT32 Boot sector
     FAT32_BOOTSECTOR boot_fat32 <bgcolor=cLtPurple>;
+    Assert(boot_fat32.bpb_fat32.BytesPerSector != 0);
     local quad  BytesPerSector = boot_fat32.bpb_fat32.BytesPerSector;
     local quad  CurrentPosSector = VolumeStartPosition / BytesPerSector;
 
@@ -820,6 +1196,9 @@ typedef struct
 //################################################################
 
 // FAT Directory Attribute
+// BUGBUG -- would prefer to define this as a bitfield, to avoid
+//           forcing all callers to mask the value (which is bug-prone)
+//           unfortunately, this is not an available feature (as of v9.0)
 typedef enum <uchar>
 {
     FAT_ATTR_LongFileNameEntry        = 0x0F, // special case
@@ -852,8 +1231,8 @@ typedef enum <uchar>
     FAT_ATTR_Hidden_System_Directory_Archive          = 0x36,
     FAT_ATTR_ReadOnly_Hidden_System_Directory_Archive = 0x37,
 } FAT_ATTR_TYPE <read=ReadFAT_ATTR_TYPE>;
-local const uchar FAT_ATTR_TYPE_RESERVED_MASK = 0xC0;
-local const uchar FAT_ATTR_TYPE_VALID_MASK = 0x3F;
+local const uchar FAT_ATTR_TYPE_RESERVED_MASK <hidden=true> = 0xC0;
+local const uchar FAT_ATTR_TYPE_VALID_MASK <hidden=true> = 0x3F;
 
 
 
@@ -1057,9 +1436,9 @@ DWORD FAT_AddressToCluster( UQUAD address, int DriveNum )
 // directory entries of 0x20 bytes each.  These variables hold
 // state used to handle cluster-spanning entries, etc.
 //
-local UQUAD XYZZY_Start;
-local UQUAD XYZZY_End; // end of contiguous area
-local WORD  XYZZY_IsFirstCluster;
+local UQUAD XYZZY_Start           <hidden=true>;
+local UQUAD XYZZY_End             <hidden=true>; // end of contiguous area
+local WORD  XYZZY_IsFirstCluster  <hidden=true>;
 
 // Check for directory reads that go off the end of a cluster -
 //  need to jump to the next cluster if so
@@ -1242,14 +1621,17 @@ typedef struct
     {
         // assert( !is_orphan );
         Cluster = FAT_CalculateCluster( short_entry, DriveNum );
-        if( Cluster > 2 )
+        if( Cluster >= 2 )
         {
             // Define data for this file
             FAT_JumpToCluster( Cluster, DriveNum );
-            if( (uchar)short_entry.Name[0] == 0xE5) 
+            if( (uchar)short_entry.Name[0] == 0xE5) {
                 FAT_FILE_DATA possibleDeletedData; // try to show the deleted information - may not be accurate
+            }
             else
-                FAT_FILE_DATA data;       
+            {
+                FAT_FILE_DATA data;
+            }
     
             // Define the sub-directory
             if( (short_entry.Attribute & FAT_ATTR_Directory) &&
@@ -1436,7 +1818,7 @@ typedef struct
 
         // Jump to the next cluster
         Cluster = drive[DriveNum].table.Cluster[ Cluster ];
-        if( (Cluster == 0) || (Cluster >= MaxCluster) || (Cluster == FirstCluster) )
+        if( (Cluster == 0) || (Cluster >= MaxValidCluster) || (Cluster == FirstCluster) )
             break;
     }
 
@@ -1491,34 +1873,62 @@ struct NTFS_BOOTSECTOR
 {
     BYTE   jmp[3];         // Jump Instruction
     CHAR   OEMName[8];     // OEM Identifier
-    
-    typedef struct NTFS_BPB
-    {
-        WORD  BytesPerSector;
-        BYTE  SectorsPerCluster;
-        WORD  ReservedSectors;
-        UBYTE Zero[3];
-        WORD  NotUsed;
-        MEDIA MediaDescriptor <format=hex>;
-        WORD  Zero;
-        WORD  SectorsPerTrack;
-        WORD  HeadsPerCylinder;
-        DWORD HiddenSectors;
-        DWORD NotUsed;
-        DWORD NotUsed;
-        UQUAD TotalSectors;
-        UQUAD LogicalClusterMFT;
-        UQUAD LogicalClusterMFTMirror;
-        DWORD ClustersPerFileRecSegment;
-        DWORD ClustersPerIndexBlock;
-        UQUAD SerialNumber <format=hex>;
-        DWORD Checksum;
-    };
-    
-    NTFS_BPB bpb_ntfs;
+    WORD   BytesPerSector;
+    BYTE   SectorsPerCluster;
+    WORD   ReservedSectors;
+    UBYTE  Zero[3];
+    WORD   NotUsed;
+    MEDIA  MediaDescriptor <format=hex>;
+    WORD   Zero2;
+    WORD   SectorsPerTrack;
+    WORD   HeadsPerCylinder;
+    DWORD  HiddenSectors;
+    DWORD  NotUsed;
+    DWORD  NotUsed;
+    UQUAD  TotalSectors;
+    UQUAD  LogicalClusterMFT;
+    UQUAD  LogicalClusterMFTMirror;
+    DWORD  ClustersPerFileRecSegment;
+    DWORD  ClustersPerIndexBlock;
+    UQUAD  SerialNumber <format=hex>;
+    DWORD  Checksum;
     BYTE   BootCode[426];
     WORD   EndOfSectorMarker <format=hex>;
 };
+boolean IsValidNtfsBootSector(NTFS_BOOTSECTOR &boot) {
+
+    if (boot.EndOfSectorMarker != 0xAA55) { return false; }
+    
+    if ((boot.BytesPerSector != 512) &&
+        (boot.BytesPerSector != 1024) &&
+        (boot.BytesPerSector != 2048) &&
+        (boot.BytesPerSector != 4096)) {
+        return false;
+    }
+    if ((boot.SectorsPerCluster  != 128) &&
+        (boot.SectorsPerCluster  !=  64) &&
+        (boot.SectorsPerCluster  !=  32) &&
+        (boot.SectorsPerCluster  !=  16) &&
+        (boot.SectorsPerCluster  !=   8) &&
+        (boot.SectorsPerCluster  !=   4) &&
+        (boot.SectorsPerCluster  !=   2) &&
+        (boot.SectorsPerCluster  !=   1)) {
+        return false;
+    }
+    if (boot.Zero[0] != 0) { return false; }
+    if (boot.Zero[1] != 0) { return false; }
+    if (boot.Zero[2] != 0) { return false; }
+    if (boot.Zero2 != 0) { return false; }
+
+    if (boot.TotalSectors == 0) { return false; }
+    if (boot.LogicalClusterMFT == 0) { return false; }
+    if (boot.ClustersPerFileRecSegment == 0) { return false; }
+    if (boot.ClustersPerIndexBlock == 0) { return false; }
+    // TODO: Validate the Checksum?
+    return true;
+}
+
+
 
 typedef enum <ulong>
 {
@@ -1925,7 +2335,7 @@ string ReadNTFS_ATTRIBUTE( NTFS_ATTRIBUTE &attr )
 }
 
 // Used to sign-extend run values
-local UQUAD NTFS_SignExtend[8] = { 
+local const UQUAD NTFS_SignExtend[8] <hidden=true> = { 
     0xffffffffffffff00,
     0xffffffffffff0000,
     0xffffffffff000000,
@@ -2166,8 +2576,8 @@ typedef struct
     NTFS_BOOTSECTOR boot_ntfs <bgcolor=cLtPurple>;
 
     // Master File Table (MFT)
-    ClusterSize = boot_ntfs.bpb_ntfs.BytesPerSector * boot_ntfs.bpb_ntfs.SectorsPerCluster;
-    FSeek( DriveStart + boot_ntfs.bpb_ntfs.LogicalClusterMFT * ClusterSize );
+    ClusterSize = boot_ntfs.BytesPerSector * boot_ntfs.SectorsPerCluster;
+    FSeek( DriveStart + boot_ntfs.LogicalClusterMFT * ClusterSize );
     NTFS_MASTER_FILE_TABLE mft;
 
     // Root directory - jump to '.' in the master file table
@@ -2248,11 +2658,51 @@ typedef enum <SInt16> {
     kHFSFileThreadRecord    = 0x0004
 } HFS_RecordType;
 
+// https://developer.apple.com/library/archive/documentation/mac/Files/Files-101.html#HEADING101-0
+/*
+struct HFS_BOOTSECTOR
+{
+    // Bytes 00 .. 07
+    UInt16  Identifier; // always 0x4C4B (or 0x4B4C ... have to check endianness
+    UInt32  JmpCode;    // machine-language that translate to 'BRA.S *+$90' or 'BRA.S *+$88'
+    UInt16  Version;    // flags in high-order byte, plus version of the boot block structure
+    // Bytes 08 .. 09
+    UInt16  PageFlags;  // "used internally"
+    // Bytes 0A .. 39
+    char    SystemFilename[16]; 
+    char    FinderFilename[16]; // Usually "Finder"
+    char    DebuggerFilename1[16]; // Ususally "Macsbug"
+    // Bytes 4A .. 79
+    char    DebuggerFilename2[16]; // Ususally "Disassembler"
+    char    ScreenName[16]; // name of startup screen, usually "StartUpScreen"
+    char    HelloName[16];  // name of startup program, usually "Finder"
+    char    ScrapName[16];  // name of system scrap file, usually "Clipboard"
+    // Bytes 8A .. 8B
+    UInt16  FcbAllocationCount; // Initial count of file control blocks to allocate
+    // Bytes 8C .. 8D
+    UInt16  EventQueueElementCount; // Initial count of event queue elements to allocate, usually 20 (14h)
+    // Bytes 8E .. 91
+    UInt32  HeapSize128k; // The size of the system heap on a Macintosh computer having 128k of RAM
+    // Bytes 92 .. 95
+    UInt32  HeapSize256k; // "Reserved" (!)
+    // Bytes 96 .. 99
+    UInt32  SystemHeapSize; // The size of the system heap on a Macintosh computer having 512k or more of RAM
+    // Bytes 9A .. 9B
+    UInt16  Filler; // reserved
+    // Bytes 9C .. A0
+    UInt32  SystemHeapExtraSpace; // Valid when bit 5 of high-order byte of flags field is set.  Minimum additional amount of additional System heap space required.
+    // Bytes A0 .. A3
+    UInt32  SystemHeapFraction;   // Valid when bit 5 of high-order byte of flags field is set.  Fraction of RAM available to be used for the System heap, and added to SystemHeapSize.
+    // Bytes A4 .. 3FF  (164 .. 1023)
+    Byte    BootCode[860]; // pad to 1024 bytes with boot code
+};
+*/
+
 // HFS Volume information
 struct HFS_VolumeHeader 
 {
-    uchar               reserved[1024];
-    char                signature[2];
+    uchar               reserved[1024]; // TODO: replace with HFS_BOOTSECTOR
+    char                signature[2]; // 0x4244
     UInt16              version;
     UInt32              attributes;
     char                lastMountedVersion[4];
@@ -2279,6 +2729,16 @@ struct HFS_VolumeHeader
     HFS_ForkData        attributesFile;
     HFS_ForkData        startupFile;
 };
+boolean IsValidHfsBootSector(int64 pos) {
+    // For details on the HFS boot sector, see:
+    // https://developer.apple.com/library/archive/documentation/mac/Files/Files-101.html#HEADING101-0
+    if( (ReadString( pos + 1024, 2 ) != "H+") &&
+        (ReadString( pos + 1024, 2 ) != "HX") ) {
+        return false;
+    }
+    // TODO: Add additional HFS validation
+    return true;
+}
 
 // HFS Unicode string
 struct HFS_UniStr255 
@@ -2762,6 +3222,171 @@ typedef union
 // Detect drive type
 //################################################################
 
+// Call with appropriate enumeration value to limit the types
+// of file systems checked for.  Call with FILE_SYSTEM_TYPE_VALID_MASK
+// to detect any of the supported file systems.
+// Return value is a bit-wise combination of ALL the discovered
+// file system types.
+//
+// HACKHACK: I would use a struct with bitfield enums, but
+//           local structs are not a supported feature as of v9.0.
+
+FILE_SYSTEM_TYPE FileSystemRecognizer(FILE_SYSTEM_TYPE allowedTypes)
+{
+    // detect the file system type, using the current position
+    // as the first sector of the volume (e.g., boot sector)
+    local FILE_SYSTEM_TYPE result = FILE_SYSTEM_TYPE_NONE;
+    local int64 startPos = FTell();
+   
+    Printf("FSREC Enter: startPos = %08x, allowedTypes == %s\r\n", startPos, ReadFILE_SYSTEM_TYPE(allowedTypes));
+
+    // todo: add fs recognition code
+    if (allowedTypes & FILE_SYSTEM_TYPE_EXFAT) {
+        FSeek(startPos);
+        Printf("FSREC      : ? EXFAT_BOOTSECTOR\r\n");
+        EXFAT_BOOTSECTOR exfat_boot <hidden=true>;
+        if (IsValidExfatBootSector(exfat_boot)) {
+            Printf("FSREC      : Valid: exFAT\r\n");
+            result |= FILE_SYSTEM_TYPE_EXFAT;
+        } else {
+            Printf("FSREC      : exFAT not valid\r\n");
+        }
+    }
+    if (allowedTypes & FILE_SYSTEM_TYPE_ANY_FAT_MASK) {
+        FSeek(startPos);
+        Printf("FSREC      : ? FAT_BOOTSECTOR\r\n");
+        FAT_BOOTSECTOR fat_boot <hidden=true>;
+        if (IsValidFatBootSector(fat_boot)) {
+            Printf("FSREC      : Valid: %s\r\n", ReadFILE_SYSTEM_TYPE(fat_boot.FsType));
+            result |= fat_boot.FsType;
+        } else {
+            Printf("FSREC      : FAT12/16/32 not valid\r\n");
+        }
+    }
+    if (allowedTypes & FILE_SYSTEM_TYPE_NTFS) {
+        FSeek(startPos);
+        Printf("FSREC      : ? NTFS_BOOTSECTOR\r\n");
+        NTFS_BOOTSECTOR ntfs_boot <hidden=true>;
+        if (IsValidNtfsBootSector(ntfs_boot)) {
+            Printf("FSREC      : Valid: NTFS\r\n");
+            result |= FILE_SYSTEM_TYPE_NTFS;
+        } else {
+            Printf("FSREC      : NTFS not valid\r\n");
+        }
+    }
+    if (allowedTypes & FILE_SYSTEM_TYPE_HPFS) {
+        Printf("FSREC      : ? HPFS\r\n");
+        if (IsValidHfsBootSector(FTell())) {
+            Printf("FSREC      : Valid: HPFS shown as potentially valid\r\n");
+            result |= FILE_SYSTEM_TYPE_HPFS;
+        } else {
+            Printf("FSREC      : HPFS not valid\r\n");
+        }
+    }
+    if (allowedTypes & FILE_SYSTEM_TYPE_IFS) {
+        FSeek(startPos);
+        Printf("FSREC      : ? IFS_BOOTSECTOR\r\n");
+        IFS_BOOTSECTOR ifs_boot <hidden=true>;
+        if (IsValidIfsBootsector(ifs_boot)){
+            Printf("FSREC      : Valid: IFS\r\n");
+            result |= FILE_SYSTEM_TYPE_IFS;
+        } else {
+            Printf("FSREC      : IFS not valid\r\n");
+        }
+    }
+    Printf("FSREC Exit : startPos = %08x, result == %s\r\n", startPos, ReadFILE_SYSTEM_TYPE(result));
+    return result;
+}
+
+// Map from PARTITION_SYSTEMID (which is a byte) to one or more preferred file system types
+// NOTE: uses int instead of PARTITION_SYSTEMID (which is a byte)
+//       to allow callers to indicate 'unknown/undefined' by passing -1.
+FILE_SYSTEM_TYPE PreferredFileSystemTypeFromPartitionSystemID( int SystemID )
+{
+    local FILE_SYSTEM_TYPE preferredType = FILE_SYSTEM_TYPE_NONE;
+
+    switch (SystemID) {
+        // 05h, 0Fh, (15h?,) and C5h are extended partition, handled above
+        case PARTITION_SYSTEMID_FAT_12:                   // 01h
+        case PARTITION_SYSTEMID_FAT_12_HIDDEN:            // 11h -- also FAT16 if supporting "logical sectored FAT"
+        case PARTITION_SYSTEMID_FREE_FDISK_FAT12:         // 8Dh
+        case PARTITION_SYSTEMID_OLIVETTI:                 // AAh
+        case PARTITION_SYSTEMID_SPEEDSTOR_LANSTEP_LINUX:  // FEh
+            preferredType |= FILE_SYSTEM_TYPE_FAT12;
+            break;
+
+        case PARTITION_SYSTEMID_FAT_16_INF32MB:           // 04h
+        case PARTITION_SYSTEMID_EXT_FAT16_INT13:          // 0Eh
+        case PARTITION_SYSTEMID_FAT_16_HIDDEN_INF32MB:    // 14h -- also FAT12 if supporting "logical sectored FAT"
+        case PARTITION_SYSTEMID_FAT_16_HIDDEN:            // 16h
+        case PARTITION_SYSTEMID_HIDDEN_FAT16_LBA:         // 1Eh
+        case 121:                                         // 79h -- TODO: e.g., APTI alternative FAT16
+        case 122:                                         // 7Ah -- TODO: e.g., APTI alternative FAT16
+        case 123:                                         // 7Bh -- TODO: e.g., APTI alternative FAT16B        
+        case PARTITION_SYSTEMID_FREE_FDISK_PRIMARY_FAT16: // 90h
+        case PARTITION_SYSTEMID_FREE_FDISK_LARGE_FAT16:   // 92h
+        case PARTITION_SYSTEMID_FREE_FDISK_FAT16_LBA:     // 9Ah
+        case PARTITION_SYSTEMID_DELL_POWEREDGE_UTIL:      // DEh
+            preferredType |= FILE_SYSTEM_TYPE_FAT16;
+            break;
+
+        case PARTITION_SYSTEMID_FAT_16:                   // 06h
+        case PARTITION_SYSTEMID_OS2_HIDDEN_HIBERNATION:   // 84h
+            preferredType |= FILE_SYSTEM_TYPE_FAT12;
+            preferredType |= FILE_SYSTEM_TYPE_FAT16;
+            break;
+
+        // These partition types were used by "logical sectored FAT" variants
+        // Not having one of these images, I cannot test that this would work.
+        // 
+        // case PARTITION_SYSTEMID_AIX:                      // 08h -- FAT12/FAT16
+        // case PARTITION_SYSTEMID_FAT_12_HIDDEN:            // 11h -- only FAT12 until tested, then add FAT16
+        // case PARTITION_SYSTEMID_FAT_16_HIDDEN_INF32MB:    // 14h -- only FAT16 until tested, then add FAT12
+        // case PARTITION_SYSTEMID_NEC_DOS:                  // 24h -- FAT12/FAT16
+        // case PARTITION_SYSTEMID_GOLDEN_BOW_EZ_BIOS:       // 56h -- FAT12/FAT16
+        // case 229:                                         // E5h -- FAT12/FAT16
+        // case PARTITION_SYSTEMID_DOS_SECONDARY:            // F2h -- FAT12/FAT16
+
+        case PARTITION_SYSTEMID_PRI_FAT32_INT13:          // 0Bh
+        case PARTITION_SYSTEMID_EXT_FAT32_INT13:          // 0Ch
+        case PARTITION_SYSTEMID_OSR2_FAT32:               // 1Bh
+        case PARTITION_SYSTEMID_OSR2_FAT32_LBA:           // 1Ch
+        case 124:                                         // 7Ch -- TODO: e.g., APTI alternative FAT32
+        case 125:                                         // 7Dh -- TODO: e.g., APTI alternative FAT32
+        case PARTITION_SYSTEMID_FREE_FDISK_FAT32:         // 97h
+        case PARTITION_SYSTEMID_CP_M:                     // DBh -- e.g., Dell system restore partition
+            preferredType |= FILE_SYSTEM_TYPE_FAT32;
+            break;
+
+        case PARTITION_SYSTEMID_COMPAQ_DIAG:              // 12h
+        case PARTITION_SYSTEMID_FREE_FDISK_FAT32_LBA:     // 98h -- Not just FAT32...
+        case PARTITION_SYSTEMID_EFI_FS:                   // EFh -- EFI System partition, typically FAT32
+            preferredType |= FILE_SYSTEM_TYPE_ANY_FAT_MASK;
+            preferredType |= FILE_SYSTEM_TYPE_EXFAT;
+            break;
+
+        case PARTITION_SYSTEMID_DDRDRIVE_SOLID_STATE_FS:  // F7h -- e.g., O.S.G. by Natalia Portillo
+            preferredType |= FILE_SYSTEM_TYPE_EXFAT;     
+            break;
+
+        case PARTITION_SYSTEMID_NTFS_HPFS:                // 07h
+        case PARTITION_SYSTEMID_NTFS_HPFS_HIDDEN:         // 17h
+            preferredType |= FILE_SYSTEM_TYPE_NTFS;
+            preferredType |= FILE_SYSTEM_TYPE_HPFS;
+            preferredType |= FILE_SYSTEM_TYPE_EXFAT;      // These partition types are also used for exFAT
+            break;
+
+        case PARTITION_SYSTEMID_PQSERVICE_ROUTERBOOT:     // 27h
+            preferredType |= FILE_SYSTEM_TYPE_NTFS;
+            break;
+
+        case PARTITION_SYSTEMID_SHAGOS_SWAP_MACOS_X_HFS:  // AFh
+            preferredType |= FILE_SYSTEM_TYPE_HPFS;
+            break;
+    }
+    return preferredType;
+}
+
 // Used to prevent drives from being defined twice - this could
 // happen if a drive is listed in the MBR and the EFI table
 int DriveAlreadyExists( int64 pos )
@@ -2776,113 +3401,144 @@ int DriveAlreadyExists( int64 pos )
 }
 
 // Function to detect different types of drives
+// NOTE: uses int instead of PARTITION_SYSTEMID (which is a byte)
+//       to allow callers to indicate 'unknown/undefined' by passing -1.
 int AutoDetectDrive( int SystemID )
 {
-    local int   i;
-    local int64 startPos;
+    local int    i <hidden=true>;
+    local int64  startPos <hidden=true> = FTell();
+    local string SystemIDAsString = ReadPARTITION_SYSTEMID(SystemID);
+    local int64  newStart;
 
-    // Detect drive by using the SystemID from the partition table
-    if( SystemID != -1 )
+    Printf("ADD() Enter: startPos = %08x, SystemID == %s\r\n", startPos, SystemIDAsString);
+
+    if ( SystemID == 237 )
     {
-        if( (SystemID==FAT_16_INF32MB) ||
-            (SystemID==FAT_16) ||
-            (SystemID==EXT_FAT16_INT13) )
-        {    
-            // Found FAT16 drive
-            FAT16_DRIVE drive;
-            return true;
-        }
-        else if( (SystemID==PRI_FAT32_INT13) ||
-                 (SystemID==EXT_FAT32_INT13) )
-        {
-            // Found FAT32 drive
-            FAT32_DRIVE drive;
-            return true;
-        }
-        else if( SystemID==SHAGOS_SWAP_MACOS_X_HFS )
-        {
-            // Found HFS drive
-            HFS_DRIVE drive;
-            return true;
-        }
-        else if( SystemID==NTFS_HPFS )
-        {
-            // Found NTFS drive
-            NTFS_DRIVE drive;
-            return true;
-        }
-        else if( (SystemID==EXTENDED) ||
-                 (SystemID==WIN95_EXT_PARTITION) ||
-                 (SystemID==DRDOS_SECURED_EXTENDED) )
-        {
-            // Extended partition
-            startPos = FTell();
-            EXTENDED_PARTITION extended <bgcolor=cLtPurple>;
+        // EDh -- was proposed for GPT hybrid MBR solution, but no idea if used?
+        Printf("ADD() Exit: startPos = %08x, GPT hybrid MBR unsupported\r\n", startPos);
+        DRIVE_NOT_SUPPORTED drive;
+        return;
+    }
 
-            // Find the extended drives
-            for( i = 0; i < 2; i++ )
+    // TODO -- Fill in the below sections marked as "unsupported"?
+    // a number of partition types might initially appear valid,
+    // but could case script to crash.  Feel free to remove those checks,
+    // to allow running FS recognizer on them anyways.
+
+    // Handle partitions that are themselves container partitions
+    if ( (SystemID == 21) ||  // 15h -- TODO: hidden extended partition (CHS)
+         (SystemID == 31) ||  // 1Fh -- TODO: hidden extended partition (LBA)
+         (SystemID == 133) || // 85h -- TODO: Linux extended partition
+         (SystemID == 145) || // 91h -- TODO: Free FDISK extended partition (CHS)
+         (SystemID == PARTITION_SYSTEMID_FREE_FDISK_EXTENDED_LBA) ) // 9Bh
+    {
+        // These partition types are containers of other partitions
+        // but have no test case for them.
+        Printf("ADD() Exit: startPos = %08x, partition type %s unsupported\r\n", startPos, SystemIDAsString);
+        DRIVE_NOT_SUPPORTED drive;
+        return;
+    }
+
+    if ( (SystemID == PARTITION_SYSTEMID_EXTENDED) ||
+         (SystemID == PARTITION_SYSTEMID_WIN95_EXT_PARTITION) ||
+         (SystemID == PARTITION_SYSTEMID_DRDOS_SECURED_EXTENDED) )
+    {
+        // Extended partition
+        EXTENDED_PARTITION extended <bgcolor=cLtPurple>;
+
+        // Find the extended drives
+        for( i = 0; i < 2; i++ )
+        {
+            if( extended.partitions[i].SystemID != EMPTY )
             {
-                if( extended.partitions[i].SystemID != EMPTY )
+                newStart = startPos + extended.partitions[i].RelativeSector*(INT64)512;
+                Printf("ADD()      : checking extended[%d] (%x)\r\n", i, newStart);
+                FSeek( newStart );
+                if( !DriveAlreadyExists(FTell()) )
                 {
-                    FSeek( startPos + extended.partitions[i].RelativeSector*(INT64)512 );
-                    if( !DriveAlreadyExists(FTell()) )
+                    if( !AutoDetectDrive( extended.partitions[i].SystemID ) )
                     {
-                        if( !AutoDetectDrive( extended.partitions[i].SystemID ) )
-                            DRIVE_NOT_SUPPORTED drive;
+                        DRIVE_NOT_SUPPORTED drive;
                     }
                 }
             }
-            return true;
         }
-        else if( SystemID==LEGACY_MBR_EFI_HEADER )
-        {
-            // EFI partition
-            startPos = FTell();
-            EFI_PARTITION efi <bgcolor=cLtPurple>;
-
-            // Find the drives
-            i = 0;
-            while( exists( efi.partitions[i] ) )
-            {
-                FSeek( efi.partitions[i].FirstLBA*512 );
-                if( !AutoDetectDrive( -1 ) )
-                    DRIVE_NOT_SUPPORTED drive;
-                i++;
-            }
-            return true;
-        }
-    }
-
-    // Detect by reading data from the header
-    startPos = FTell();
-    if( ReadString( startPos + 0x36, 8 ) == "FAT16   " )
-    {
-        // Found FAT16 drive
-        FAT16_DRIVE drive;
+        Printf("ADD() Exit: startPos = %08x, extended partitions\r\n", startPos);
         return true;
     }
-    else if( ReadString( startPos + 0x52, 8 ) == "FAT32   " )
+
+    if (SystemID == PARTITION_SYSTEMID_LEGACY_MBR_EFI_HEADER)  // EEh
     {
-        // Found FAT32 drive
+        // EFI partition
+        EFI_PARTITION efi <bgcolor=cLtPurple>;
+
+        // Find the drives
+        i = 0;
+        while( exists( efi.partitions[i] ) )
+        {
+            newStart = efi.partitions[i].FirstLBA*512;
+            Printf("ADD()      : checking EFI[%d] (%x)\r\n", i, newStart);
+            FSeek( newStart );
+            if( !AutoDetectDrive( -1 ) )
+            {
+                DRIVE_NOT_SUPPORTED drive;
+            }
+            i++;
+        }
+        Printf("ADD() Exit: startPos = %08x, EFI partitions\r\n", startPos);
+        return true;
+    }
+    local FILE_SYSTEM_TYPE preferredType = PreferredFileSystemTypeFromPartitionSystemID(SystemID);
+
+    // Now loop twice... first for a preferredType of file system
+    // then for any other file system
+    local FILE_SYSTEM_TYPE detected = FileSystemRecognizer(preferredType);
+    FSeek(startPos); // reset after calling FSRec()
+
+    if (detected == FILE_SYSTEM_TYPE_NONE) {
+        Printf("ADD()      : Preferred type not detected, trying other types\r\n");
+        local FILE_SYSTEM_TYPE secondCheck = FILE_SYSTEM_TYPE_VALID_MASK ^ preferredType;
+        detected = FileSystemRecognizer(secondCheck); // try all the other options...
+        FSeek(startPos); // reset after calling FSRec()
+    }
+    Printf("ADD()      : detected %s\r\n", EnumToString(detected));
+    
+    if (detected & FILE_SYSTEM_TYPE_EXFAT) {
+        Printf("ADD()      : adding EXFAT\r\n");
+        EXFAT_BOOTSECTOR boot;
+        return true;
+    } else if (detected & FILE_SYSTEM_TYPE_FAT32) {
+        Printf("ADD()      : adding FAT32\r\n");
         FAT32_DRIVE drive;
         return true;
-    }
-    else if( ReadString( startPos + 0x3, 8 ) == "NTFS    " )
-    {
-        // Found NTFS drive
+    } else if (detected & FILE_SYSTEM_TYPE_FAT16) {
+        Printf("ADD()      : adding FAT16\r\n");
+        FAT16_DRIVE drive;
+        return true;
+//    } else if (detected & FILE_SYSTEM_TYPE_FAT12) {
+//        Printf("ADD()      : adding FAT12\r\n");
+//        FAT12_DRIVE drive;
+//        return true;
+    } else if (detected & FILE_SYSTEM_TYPE_NTFS) {
+        Printf("ADD()      : adding NTFS\r\n");
         NTFS_DRIVE drive;
         return true;
-    }
-    else if( (ReadString( startPos + 1024, 2 ) == "H+") ||
-             (ReadString( startPos + 1024, 2 ) == "HX") )
-    {
-        // Found HFS drive
+    } else if (detected & FILE_SYSTEM_TYPE_HPFS) {
+        Printf("ADD()      : adding HPFS\r\n");
         HFS_DRIVE drive;
         return true;
+//    } else if (detected & FILE_SYSTEM_TYPE_IFS) {
+//        Printf("ADD()      : adding IFS\r\n");
+//        IFS_BOOTSECTOR boot;
+//        return true;
     }
-
     return false; // not found
 }
+
+////////////////////////////////////////////////////////////////////////
+// THIS IS THE ACTUAL STARTING POINT OF EXECUTION IN THE TEMPLATE
+////////////////////////////////////////////////////////////////////////
+
 
 // Check for EndOfSectorMarker (present on MBR/FAT16/FAT32/NTFS)
 if( ReadUShort(510)!=0xAA55 && ReadUByte(1024) != 'H' )
@@ -2892,37 +3548,57 @@ if( ReadUShort(510)!=0xAA55 && ReadUByte(1024) != 'H' )
 }
 
 // Check for different drive types
-if( AutoDetectDrive(-1) == false )
+local boolean AutoDetectDriveResult = AutoDetectDrive(-1);
+if (!AutoDetectDriveResult)
 {
     // Auto detect the MBR
     local unsigned short mbr_boot_ok=0;
     local unsigned short i;
-    local uchar BootIndicator, SystemID;
+    local PARTITION_SYSTEMID SystemID[4];
+    local uchar BootIndicator[4] = { 0x77, 0x77, 0x77, 0x77 };
+    local boolean SystemID_AutoDetectDrive_Result[4] = { 0x777, 0x777, 0x777, 0x777 };
+    local FILE_SYSTEM_TYPE PreferredFS[4] = { FILE_SYSTEM_TYPE_NONE, FILE_SYSTEM_TYPE_NONE, FILE_SYSTEM_TYPE_NONE, FILE_SYSTEM_TYPE_NONE };
     for(i=0;i<4;i++)
     {
         // Check BootIndicator and SystemID
-        BootIndicator = ReadUByte( 0x1BE + i*10h );
-        SystemID      = ReadUByte( 0x1C2 + i*10h );
-        if( (BootIndicator==SYSTEM_PARTITION || BootIndicator==NOBOOT) && (SystemID!=EMPTY) )
+        BootIndicator[i] = ReadUByte( 0x1BE + i*10h );
+        SystemID[i]      = ReadUByte( 0x1C2 + i*10h );
+        // only parse when:
+        // BOTH a valid boot indicator (0x00 or 0x80)
+        // AND  when the partition is not listed as an empty partition
+        if( (BootIndicator[i] == SYSTEM_PARTITION || BootIndicator[i] == NOBOOT) &&
+            (SystemID[i] != PARTITION_SYSTEMID_EMPTY) )
         {
+            // If the above holds true, then we presume this is an MBR-based media
+            // and thus initialize the MBR structure if not already having done so.
             if(mbr_boot_ok==0)
             {
+                FSeek(0);
                 MASTER_BOOT_RECORD boot_mbr <bgcolor=cLtPurple>;
                 mbr_boot_ok=1;
             }
 
-            // Jump to Partition
+            // Jump to Partition using boot_mbr structure definition of partition
             FSeek(boot_mbr.partitions[i].RelativeSector*(INT64)512);
+            
+            // If the drive already exists (e.g., MBR+GPT both listing partitions)
+            // then do not add the drive again
             if( !DriveAlreadyExists(FTell()) )
             {
-                if( !AutoDetectDrive( SystemID ) )
+                PreferredFS[i] = PreferredFileSystemTypeFromPartitionSystemID(SystemID[i]);
+                SystemID_AutoDetectDrive_Result[i] = AutoDetectDrive(SystemID[i]);
+                if(!SystemID_AutoDetectDrive_Result[i])
+                {
                     DRIVE_NOT_SUPPORTED drive;
+                }
             }
         }
     }
 
     // Could not find MBR - drive is not supported
     if( !mbr_boot_ok )
+    {
         DRIVE_NOT_SUPPORTED drive;
+    }
 }
 
