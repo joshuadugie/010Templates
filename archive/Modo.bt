@@ -3,13 +3,14 @@
 //
 //      File: Modo.bt
 //   Authors: Gwynne Reddick (Original version), Simon Beetham (This version)
-//   Version: 1.0
+//   Version: 1.1
 //   Purpose: Reads all known chunks in Modo *.lxo, *.lxp. *.lxe and *.lxl 3D files as documented at
 //            http://sdk.luxology.com/wiki/File_Formats.
 //  Category: CAD
 // File Mask: *.lx?
 //  ID Bytes: 46 4F 52 4D //FORM
 // History:
+//   1.1  2018-11-16 Simon Beetham: Corrected display of point & poly indexing on vmap, vmad & vmed chunks where variable sized index's apply. Corrected display of item name where ITEM.VNAM sub-chunks don't exist in .lxp's
 //   1.0  2018-11-05 Simon Beetham: Original version provided by Gwynne Reddick back in 2014 significantly altered, amended as per url above
 //------------------------------------------------
 
@@ -66,7 +67,7 @@ struct IASS_CHUNK;
 // misc
 struct RGBA;
 struct POINT_t;
-struct VERTINDEX_t;
+struct PointIndex_t;
 struct VERTDATA;
 
 // unrecognized chunk/subchunk
@@ -488,14 +489,25 @@ typedef struct
     // Padding so the next chunk starts on an even byte
     if( (size & 1) && (FTell() < FileSize()) )
         uchar padding <hidden=true>;
-} ITEM_CHUNK <read=fn_Read_ITEM, name="ITEM">;
+} ITEM_CHUNK <name="ITEM", read=fn_Read_ITEM>;
 
 string fn_Read_ITEM(ITEM_CHUNK &chunk)
 {
     string s;
     string name = chunk.username;
     if (Strlen(chunk.username) == 0)
-    	name = chunk.VNAM[0].name;
+  	{
+  		if (exists(chunk.VNAM))
+  		{
+				if (Strlen(chunk.VNAM[0].name) != 0)
+					name = chunk.VNAM[0].name;
+  		}
+  		else
+  		{
+  			if (exists(chunk.UNIQ))
+  				name = chunk.UNIQ[0].identifier;
+  		}
+  	}
     return SPrintf(s, "Type: '%s' Name: '%s'", chunk.type, name);
 }
 
@@ -726,6 +738,23 @@ string fn_Read_PNTS(PNTS_CHUNK &pnts)
     return SPrintf( s, "%d", pnts.size/12 );
 }
 
+typedef struct
+{
+    local ushort tmpindex = ReadUShort(FTell());
+    if (tmpindex < 0xFF00)
+        ushort  index;
+    else
+        ulong   index;
+} PointIndex_t<name="Index", read=fn_Read_PointIndex>;
+
+typedef struct
+{
+    local ushort tmpindex = ReadUShort(FTell());
+    if (tmpindex < 0xFF00)
+        ushort  index;
+    else
+        ulong   index;
+} PolyIndex_t<name="Index", read=fn_Read_PolyIndex>;
 
 // BBOX chunk
 typedef struct
@@ -767,21 +796,18 @@ typedef struct
     ID              chunkID<name="ChunkID", fgcolor=cRed>;
     CSIZE           size<name="Size">;
     local int       pos = FTell();
-    ID              type<name="Map Type   ">;
+    ID              type<name="Map Type">;
     ushort          dimension<name="Dimension">;
-    string          name<name="Name   ">;
+    string          name<name="Name">;
     if (sizeof(name) & 1)
         uchar padding <hidden=true>;
+    
     typedef struct
     {
-        local ushort tmpIndex;
-        tmpIndex = ReadUShort(FTell());
-        if (tmpIndex < 0xFF00)
-            ushort  index<name="Index">;
-        else
-            ulong   index<name="Index">;
-        float           values[dimension];
+			PointIndex_t index;
+      float values[dimension]<name="Value(s)">;
     } vmap_point_t<name="Point">;
+    
     while(FTell() - pos < size)
         vmap_point_t     point;
 
@@ -805,14 +831,6 @@ typedef struct
     local int       pos = FTell();
     ID              polygon_type<name="PolyType", read=fn_Read_PolyType>;
     
-    typedef struct
-    {
-        local ushort tmpindex = ReadUShort(FTell());
-        if (tmpindex < 0xFF00)
-            ushort  index;
-        else
-            ulong   index;
-    } VERTINDEX_t<name="Index", read=fn_Read_VertIndex>;
 
 		typedef struct
 		{
@@ -825,13 +843,13 @@ typedef struct
       else if ("HCRV" == polygon_type || "BCRV"  == polygon_type)
       {
           ulong flags;
-          VERTINDEX_t vertIndex[nverts] <optimize=false>;
+          PointIndex_t vertIndex[nverts] <optimize=false>;
           break;
       }
       if ("CURV" == polygon_type || "BEZR" == polygon_type)
           if (nverts < 4 || 1 != (nverts % 3))        // Skip invalid bezier curves
               continue;
-      VERTINDEX_t vertIndex[nverts] <optimize=false>;
+      PointIndex_t vertIndex[nverts] <optimize=false>;
 		} POLY_t <name="Poly">;
     
     local uint count = 0;
@@ -847,13 +865,23 @@ typedef struct
         uchar padding <hidden=true>;
 } POLS_CHUNK <name="POLS", read=fn_Read_POLS>;
 
-string fn_Read_VertIndex(VERTINDEX_t &index)
+string fn_Read_PointIndex(PointIndex_t &index)
 {
     string s;
     int i = (int)index.index;
     if (sizeof(index) == 4)
 		{
-			//ULong Index
+			i &= 0x00FFFFFF;
+		}
+    return SPrintf(s, "%i", i);
+}
+
+string fn_Read_PolyIndex(PolyIndex_t &index)
+{
+    string s;
+    int i = (int)index.index;
+    if (sizeof(index) == 4)
+		{
 			i &= 0x00FFFFFF;
 		}
     return SPrintf(s, "%i", i);
@@ -877,13 +905,13 @@ typedef struct
     ID              chunkID<name="ChunkID", fgcolor=cRed>;
     CSIZE           size<name="Size">;
     local int       pos = FTell();
-    ID              type<name="Type   ">;
+    ID              type<name="Type">;
     ushort          dimension<name="Dimension">;
     string          name<name="Name">;
     if (sizeof(name) & 1)
         uchar padding <hidden=true>;
     
-    while( FTell() - pos < size )
+    while(FTell() - pos < size)
         VERTDATA    data;
     
     // Padding so the next chunk starts on an even byte
@@ -1264,25 +1292,6 @@ string fn_Read_ITEM_LINK(ITEM_LINK_SUBCHUNK &link)
     string s;
     return SPrintf(s, "Graph: %s", link.graphName);
 }
-
-
-//enum <ushort> ENUM1{              // Item Data Types
-//    LXItemType_Int              = 0x01,
-//    LXItemType_Float            = 0x02,
-//    LXItemType_String           = 0x03,
-//    LXItemType_Variable         = 0x04,
-//    LXItemType_Envelope         = 0x10,
-//    LXItemType_UndefState       = 0x20,     // undefined action channel
-//
-//    LXItemType_EnvelopeInt      = LXItemType_Envelope | LXItemType_Int,
-//    LXItemType_EnvelopeFloat    = LXItemType_Envelope | LXItemType_Float,
-//    LXItemType_EnvelopeString   = LXItemType_Envelope | LXItemType_String,
-//
-//    LXItemType_FloatAlt         = 0x4e56,   // compatibility with some apps
-//
-//    LXEnvelopeType_Float        = 0,
-//    LXEnvelopeType_Int          = 1,
-//    };
 
 
 // CHNL subchunk
@@ -2338,7 +2347,7 @@ typedef struct {
     float   X;
     float   Y;
     float   Z;
-} POINT_t <read=fn_Read_Point, name="Point">;
+} POINT_t <read=fn_Read_Point, name="Point", size=12>;
 
 string fn_Read_Point(POINT_t &point)
 {
@@ -2350,20 +2359,10 @@ string fn_Read_Point(POINT_t &point)
 //used by VMAD and VMED chunks
 typedef struct
 {
-        local ushort tmpIndex;
-        tmpIndex = ReadUShort(FTell());
-        if (tmpIndex < 0xFF00)
-            ushort  indexInPNTS;
-        else
-            ulong   indexInPNTS;
-        local ushort tmpIndex2;
-        tmpIndex2 = ReadUShort(FTell());
-        if (tmpIndex2 < 0xFF00)
-            ushort  indexSharedPoly;
-        else
-            ulong   indexSharedPoly;
+				PointIndex_t pointIndex<name="PointIndex">;
+        PolyIndex_t sharedPolyIndex<name="PolyIndex">;
         if (dimension > 0)
-            float           values[dimension];
+            float           values[dimension]<name="Value(s)">;
 } VERTDATA<name="Vertex Data">;
 
 

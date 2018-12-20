@@ -4,12 +4,13 @@
 //      File: JPG.bt
 //   Authors: Ibrahim Onaran
 //    E-mail: onaran AT gmail DOT com
-//   Version: 1.6.3
+//   Version: 1.6.4
 //   Purpose: Template for JPG image files. 
 //  Category: Image
 // File Mask: *.jpg,*.jpeg
 //  ID Bytes: FF D8 FF
 //   History: 
+//   1.6.4 2018-12-20 Denis Anisimov: COMPSOS bug fixed.
 //   1.6.3 2018-01-04 I Onaran: Changed author information.
 //   1.6.2 2016-11-29 Bartosz Dziewonski: Search for end of file marker forwards rather than backwards.
 //                    Data after the marker may contain bytes that look just like the marker itself.
@@ -1388,6 +1389,7 @@ typedef struct tagSOS {
 	ubyte nr_comp;
 	ChangeColor(0);
 	struct COMPSOS {
+        ubyte compId;
 		ubyte AC:4;
 		ubyte DC:4;
 	} comp[nr_comp];
